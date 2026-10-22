@@ -131,13 +131,21 @@ def launch_parrot():
     if not disk.exists():
         console.print("[red]El disco virtual parrot_security.qcow2 no fue encontrado en /home/ultimau/vms/disks/[/]")
         return
-    console.print(f"[bold green]⚡ Lanzando Parrot Security QEMU/KVM en modo nativo...[/]")
+    console.print(f"[bold green]⚡ Lanzando Parrot Security en QEMU/KVM con UEFI (OVMF)...[/]")
+    
+    # Soporte UEFI obligatorio para discos GPT modernos de Parrot OS
+    ovmf_bios = "/usr/share/ovmf/OVMF.fd"
     cmd = [
         "qemu-system-x86_64",
         "-enable-kvm",
         "-cpu", "host",
         "-smp", "4",
-        "-m", "6G",
+        "-m", "6G"
+    ]
+    if Path(ovmf_bios).exists():
+        cmd.extend(["-bios", ovmf_bios])
+
+    cmd.extend([
         "-drive", f"file={disk},if=virtio,format=qcow2",
         "-vga", "virtio",
         "-display", "gtk,gl=on",
@@ -145,9 +153,9 @@ def launch_parrot():
         "-net", "user",
         "-usb",
         "-device", "usb-tablet"
-    ]
+    ])
     subprocess.Popen(cmd)
-    console.print("[green]✔ Parrot Security iniciado con aceleración KVM y OpenGL.[/]")
+    console.print("[green]✔ Parrot Security iniciado con soporte UEFI (OVMF) y aceleración KVM.[/]")
 
 def launch_tails():
     info = ISOS["tails"]
@@ -155,7 +163,6 @@ def launch_tails():
         console.print("[red]Primero descarga la ISO de Tails OS (Opción 1).[/]")
         return
     console.print(f"[bold green]🧅 Lanzando Tails OS Amnésico 100% en RAM...[/]")
-    # Tails corre puramente en RAM, sin disco duro conectado
     cmd = [
         "qemu-system-x86_64",
         "-enable-kvm",
@@ -176,12 +183,11 @@ def launch_tails():
 
 def launch_vault():
     info = ISOS["debian"]
-    if not info["file"].exists():
-        console.print("[red]Primero descarga la ISO de Debian Netinst (Opción 1).[/]")
+    disk = info["disk"]
+    if not disk.exists():
+        console.print("[red]El disco virtual vault_debian.qcow2 no existe.[/]")
         return
-    disk = ensure_disk("debian")
     console.print(f"[bold cyan]🏛️ Lanzando Bóveda Debian Minimal AIR-GAPPED (Cero conexión a internet)...[/]")
-    # Seguridad máxima: -net none asegura aislamiento absoluto contra la red
     cmd = [
         "qemu-system-x86_64",
         "-enable-kvm",
@@ -189,8 +195,6 @@ def launch_vault():
         "-smp", "2",
         "-m", "2G",
         "-drive", f"file={disk},if=virtio,format=qcow2",
-        "-cdrom", str(info["file"]),
-        "-boot", "menu=on",
         "-vga", "virtio",
         "-display", "gtk",
         "-net", "none",
