@@ -1,0 +1,30 @@
+id: api-docs-exposure
+info:
+  name: Documentación de API o Esquema OpenAPI / Swagger Expuesto
+  author: Ibrahim Garcia
+  severity: MEDIO
+  description: Detección de esquemas OpenAPI, Swagger UI o consolas GraphQL accesibles sin autenticación.
+  impact: Facilita el mapeo total de la superficie de ataque, parámetros ocultos y rutas de backend a actores externos.
+  remediation: Restringir la documentación interactiva a entornos de staging/desarrollo o requerir login.
+
+requests:
+  - method: GET
+    path:
+      - /swagger.json
+      - /openapi.json
+      - /api-docs
+      - /v2/api-docs
+      - /swagger/v1/swagger.json
+      - /graphql
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+      - type: regex
+        regex:
+          - "(?:\"swagger\"\\s*:\\s*\"2\\.0\"|\"openapi\"\\s*:\\s*\"3\\.|GraphQL Playground|GraphQL IDE)"
+      - type: negative-word
+        words:
+          - "Ups: not_found"
+          - "404 Not Found"

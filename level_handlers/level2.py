@@ -6,7 +6,7 @@ try:
 except ImportError:
     from textual.widgets import TextLog
 
-def run(target: str, mode: str, logger: TextLog, use_browser: bool = False):
+def run(target: str, mode: str, logger: TextLog, use_browser: bool = False, **kwargs):
     """Level 2 – Low‑risk fuzzing.
 
     * Sends a POST request with an empty JSON body.

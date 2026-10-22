@@ -1,0 +1,30 @@
+id: backup-dumps-exposure
+info:
+  name: Exposición de Volcados de Base de Datos y Respaldos (.sql, .zip)
+  author: Ibrahim Garcia
+  severity: CATASTRÓFICO
+  description: Archivos de respaldo de base de datos o código comprimido accesibles en la raíz pública.
+  impact: Fuga masiva de toda la información corporativa, tablas de usuarios y contraseñas hasheadas.
+  remediation: Mover los respaldos fuera del document root del servidor web y cifrar los archivos en reposo.
+
+requests:
+  - method: GET
+    path:
+      - /backup.sql
+      - /database.sql
+      - /dump.sql
+      - /db.sql
+      - /backup.zip
+      - /site_backup.tar.gz
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+      - type: regex
+        regex:
+          - "(?:CREATE TABLE|INSERT INTO|MySQL dump|PostgreSQL database dump|SQLite format)"
+      - type: negative-word
+        words:
+          - "<html"
+          - "<!doctype"

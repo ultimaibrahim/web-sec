@@ -3,14 +3,17 @@
 Orquesta Nmap, FFuf, Gobuster, SQLMap y Auditoría pasiva de cabeceras OWASP.
 """
 
-import subprocess
-import shutil
+import base64
 import json
+import os
 import re
-import urllib.request
+import shutil
 import ssl
+import subprocess
+import urllib.parse
+import urllib.request
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Any, Dict, List
 
 def run_nmap_scan(target: str, ports: str = "F") -> Dict[str, Any]:
     """Ejecuta escaneo rápido de puertos con nmap en formato seguro."""
@@ -283,4 +286,286 @@ def discover_subdomains(domain: str) -> Dict[str, Any]:
         "total_live": len(live_hosts),
         "subdomains": live_hosts
     }
+
+
+# ---------------------------------------------------------------------------
+# Extended Open-Source Tooling Integrations (Exploration & Hybrid Execution)
+# ---------------------------------------------------------------------------
+
+def run_amass_scan(domain: str, passive: bool = True) -> Dict[str, Any]:
+    """Ejecuta OWASP Amass para mapeo de superficie de ataque y subdominios."""
+    amass_bin = shutil.which("amass")
+    clean_domain = re.sub(r"[^a-zA-Z0-9.-]", "", domain.replace("https://", "").replace("http://", "").split("/")[0])
+    if not amass_bin:
+        return {
+            "tool": "amass",
+            "available": False,
+            "fallback_used": True,
+            "message": "OWASP Amass no está instalado en PATH. Se utilizó motor pasivo DNS integrado.",
+            "target": clean_domain,
+            "subdomains": []
+        }
+
+    cmd = [amass_bin, "enum", "-d", clean_domain, "-timeout", "1"]
+    if passive:
+        cmd.append("-passive")
+
+    try:
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=25)
+        subs = [line.strip().lower() for line in res.stdout.splitlines() if line.strip().endswith(clean_domain)]
+        return {
+            "tool": "amass",
+            "available": True,
+            "target": clean_domain,
+            "subdomains": sorted(list(set(subs)))[:50]
+        }
+    except Exception as e:
+        return {"tool": "amass", "available": True, "error": str(e)}
+
+
+def run_subfinder_scan(domain: str) -> Dict[str, Any]:
+    """Ejecuta ProjectDiscovery Subfinder para descubrimiento pasivo de subdominios."""
+    subfinder_bin = shutil.which("subfinder")
+    clean_domain = re.sub(r"[^a-zA-Z0-9.-]", "", domain.replace("https://", "").replace("http://", "").split("/")[0])
+    if not subfinder_bin:
+        return {
+            "tool": "subfinder",
+            "available": False,
+            "fallback_used": True,
+            "message": "Subfinder no instalado. Motor Python crt.sh/HackerTarget activo.",
+            "target": clean_domain,
+            "subdomains": []
+        }
+
+    cmd = [subfinder_bin, "-d", clean_domain, "-silent", "-timeout", "5"]
+    try:
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=20)
+        subs = [line.strip().lower() for line in res.stdout.splitlines() if line.strip().endswith(clean_domain)]
+        return {
+            "tool": "subfinder",
+            "available": True,
+            "target": clean_domain,
+            "subdomains": sorted(list(set(subs)))
+        }
+    except Exception as e:
+        return {"tool": "subfinder", "available": True, "error": str(e)}
+
+
+def run_assetfinder_scan(domain: str) -> Dict[str, Any]:
+    """Ejecuta Assetfinder (TomNomNom) para descubrimiento rápido de activos."""
+    af_bin = shutil.which("assetfinder")
+    clean_domain = re.sub(r"[^a-zA-Z0-9.-]", "", domain.replace("https://", "").replace("http://", "").split("/")[0])
+    if not af_bin:
+        return {
+            "tool": "assetfinder",
+            "available": False,
+            "fallback_used": True,
+            "message": "Assetfinder no instalado en PATH.",
+            "target": clean_domain,
+            "assets": []
+        }
+
+    cmd = [af_bin, "--subs-only", clean_domain]
+    try:
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+        assets = [line.strip().lower() for line in res.stdout.splitlines() if line.strip().endswith(clean_domain)]
+        return {
+            "tool": "assetfinder",
+            "available": True,
+            "target": clean_domain,
+            "assets": sorted(list(set(assets)))
+        }
+    except Exception as e:
+        return {"tool": "assetfinder", "available": True, "error": str(e)}
+
+
+def run_sublist3r_scan(domain: str) -> Dict[str, Any]:
+    """Ejecuta Sublist3r (OSINT multi-motor en Python)."""
+    clean_domain = re.sub(r"[^a-zA-Z0-9.-]", "", domain.replace("https://", "").replace("http://", "").split("/")[0])
+    sublist3r_bin = shutil.which("sublist3r")
+    if not sublist3r_bin:
+        return {
+            "tool": "sublist3r",
+            "available": False,
+            "fallback_used": True,
+            "message": "Sublist3r no instalado. Se usa motor nativo de crt.sh/DNS.",
+            "target": clean_domain,
+            "subdomains": []
+        }
+
+    cmd = [sublist3r_bin, "-d", clean_domain, "-t", "10", "-n"]
+    try:
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=25)
+        subs = [line.strip().lower() for line in res.stdout.splitlines() if clean_domain in line.lower() and not line.startswith("[-]")]
+        return {
+            "tool": "sublist3r",
+            "available": True,
+            "target": clean_domain,
+            "subdomains": sorted(list(set(subs)))
+        }
+    except Exception as e:
+        return {"tool": "sublist3r", "available": True, "error": str(e)}
+
+
+def run_nuclei_scan(target: str, severity: str = "critical,high", tags: str = "") -> Dict[str, Any]:
+    """Ejecuta escaneo de vulnerabilidades basado en plantillas YAML con Nuclei."""
+    nuclei_bin = shutil.which("nuclei")
+    clean_url = target if target.startswith("http") else f"https://{target}"
+    if not nuclei_bin:
+        return {
+            "tool": "nuclei",
+            "available": False,
+            "fallback_used": True,
+            "message": "Nuclei no instalado. Se utilizó auditoría nativa OWASP Headers y Leaks.",
+            "target": clean_url,
+            "findings": []
+        }
+
+    cmd = [nuclei_bin, "-u", clean_url, "-severity", severity, "-silent", "-jsonl", "-timeout", "5"]
+    if tags:
+        cmd.extend(["-tags", tags])
+
+    try:
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        findings = []
+        for line in res.stdout.splitlines():
+            if line.strip():
+                try:
+                    findings.append(json.loads(line))
+                except Exception:
+                    findings.append({"raw": line.strip()})
+        return {
+            "tool": "nuclei",
+            "available": True,
+            "target": clean_url,
+            "total_findings": len(findings),
+            "findings": findings
+        }
+    except Exception as e:
+        return {"tool": "nuclei", "available": True, "error": str(e)}
+
+
+def run_spiderfoot_scan(target: str, modules: str = "sfp_whois,sfp_dnsresolve") -> Dict[str, Any]:
+    """Wrapper para SpiderFoot OSINT CLI si está disponible."""
+    sf_bin = shutil.which("spiderfoot") or shutil.which("sf")
+    if not sf_bin:
+        return {
+            "tool": "spiderfoot",
+            "available": False,
+            "fallback_used": True,
+            "message": "SpiderFoot no instalado. Se usa suite nativa de recon.",
+            "target": target,
+        }
+
+    cmd = [sf_bin, "-s", target, "-m", modules, "-q"]
+    try:
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        return {
+            "tool": "spiderfoot",
+            "available": True,
+            "target": target,
+            "output_sample": res.stdout[:400]
+        }
+    except Exception as e:
+        return {"tool": "spiderfoot", "available": True, "error": str(e)}
+
+
+def run_securitytrails_lookup(domain: str, api_key: str = "") -> Dict[str, Any]:
+    """Consulta la API de SecurityTrails para historial DNS y subdominios."""
+    clean_domain = re.sub(r"[^a-zA-Z0-9.-]", "", domain.replace("https://", "").replace("http://", "").split("/")[0])
+    if not api_key:
+        api_key = os.environ.get("SECURITYTRAILS_API_KEY", "")
+
+    if not api_key:
+        return {
+            "tool": "securitytrails",
+            "available": False,
+            "fallback_used": True,
+            "message": "API key de SecurityTrails no configurada (SECURITYTRAILS_API_KEY).",
+            "target": clean_domain,
+            "subdomains": []
+        }
+
+    url = f"https://api.securitytrails.com/v1/domain/{clean_domain}/subdomains"
+    req = urllib.request.Request(url, headers={"APIKEY": api_key, "Accept": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=8) as r:
+            data = json.loads(r.read().decode("utf-8"))
+            sub_prefixes = data.get("subdomains", [])
+            full_subs = [f"{p}.{clean_domain}" for p in sub_prefixes]
+            return {
+                "tool": "securitytrails",
+                "available": True,
+                "target": clean_domain,
+                "total": len(full_subs),
+                "subdomains": full_subs[:50]
+            }
+    except Exception as e:
+        return {"tool": "securitytrails", "available": True, "error": str(e)}
+
+
+def run_censys_lookup(query: str, api_id: str = "", api_secret: str = "") -> Dict[str, Any]:
+    """Consulta Censys Search API para certificados o hosts."""
+    if not api_id or not api_secret:
+        api_id = os.environ.get("CENSYS_API_ID", "")
+        api_secret = os.environ.get("CENSYS_API_SECRET", "")
+
+    if not api_id or not api_secret:
+        return {
+            "tool": "censys",
+            "available": False,
+            "fallback_used": True,
+            "message": "Credenciales de Censys no configuradas (CENSYS_API_ID / CENSYS_API_SECRET).",
+            "query": query,
+            "results": []
+        }
+
+    url = f"https://search.censys.io/api/v2/hosts/search?q={urllib.parse.quote(query)}&per_page=10"
+    creds = base64.b64encode(f"{api_id}:{api_secret}".encode()).decode()
+    req = urllib.request.Request(url, headers={"Authorization": f"Basic {creds}", "Accept": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=8) as r:
+            data = json.loads(r.read().decode("utf-8"))
+            return {
+                "tool": "censys",
+                "available": True,
+                "query": query,
+                "total": data.get("result", {}).get("total", 0),
+                "hits": data.get("result", {}).get("hits", [])
+            }
+    except Exception as e:
+        return {"tool": "censys", "available": True, "error": str(e)}
+
+
+def run_shodan_lookup(ip: str, api_key: str = "") -> Dict[str, Any]:
+    """Consulta la API de Shodan para detalles de infraestructura de una IP."""
+    if not api_key:
+        api_key = os.environ.get("SHODAN_API_KEY", "")
+
+    if not api_key:
+        return {
+            "tool": "shodan",
+            "available": False,
+            "fallback_used": True,
+            "message": "Shodan API Key no configurada (SHODAN_API_KEY).",
+            "target": ip,
+        }
+
+    url = f"https://api.shodan.io/shodan/host/{ip}?key={api_key}"
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=8) as r:
+            data = json.loads(r.read().decode("utf-8"))
+            return {
+                "tool": "shodan",
+                "available": True,
+                "target": ip,
+                "ports": data.get("ports", []),
+                "hostnames": data.get("hostnames", []),
+                "os": data.get("os", "Unknown"),
+                "isp": data.get("isp", ""),
+            }
+    except Exception as e:
+        return {"tool": "shodan", "available": True, "error": str(e)}
+
 

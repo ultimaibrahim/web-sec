@@ -1,0 +1,28 @@
+id: known-outdated-libraries
+info:
+  name: Librerías Frontend con Vulnerabilidades Conocidas (Retire.js Style)
+  author: Ibrahim Garcia
+  severity: MEDIO
+  description: Detección de versiones obsoletas de jQuery, AngularJS, Bootstrap o Lodash con CVEs públicos.
+  impact: Vulnerabilidades conocidas de Cross-Site Scripting (XSS) en navegadores clientes o prototipo pollution.
+  remediation: Actualizar librerías de terceros a sus versiones LTS con parches de seguridad activos.
+
+requests:
+  - method: GET
+    path:
+      - /assets/js/jquery.js
+      - /jquery.min.js
+      - /js/jquery.min.js
+      - /assets/vendor/jquery.min.js
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+      - type: regex
+        regex:
+          - "(?:jQuery v(?:1\\.[0-9]\\.|2\\.[0-9]\\.|3\\.[0-4]\\.))"
+      - type: negative-word
+        words:
+          - "<html"
+          - "<!doctype"

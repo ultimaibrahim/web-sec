@@ -6,7 +6,7 @@ except ImportError:
 
 from browser_client import fetch
 
-def run(target: str, mode: str, logger: TextLog, use_browser: bool = False):
+def run(target: str, mode: str, logger: TextLog, use_browser: bool = False, **kwargs):
     """Level 1 – Light active checks.
 
     * GET request with a benign query string.

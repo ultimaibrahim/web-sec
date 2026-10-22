@@ -7,7 +7,7 @@ except ImportError:
     from textual.widgets import TextLog
 from credential_scanner import scan_text
 
-def run(target: str, mode: str, logger: TextLog, use_browser: bool = False):
+def run(target: str, mode: str, logger: TextLog, use_browser: bool = False, **kwargs):
     """void() – Massive destructive actions (opt‑in, triple‑confirm).
 
     * Bulk POST 200 dummy records.

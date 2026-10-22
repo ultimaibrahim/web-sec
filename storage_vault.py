@@ -30,55 +30,94 @@ def decrypt_data(ciphertext: str) -> str:
     return f.decrypt(ciphertext.encode("utf-8")).decode("utf-8")
 
 def init_database():
-    with sqlite3.connect(DB_PATH) as conn:
-        cursor = conn.cursor()
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS findings (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                timestamp REAL,
-                target TEXT,
-                tool TEXT,
-                finding_type TEXT,
-                content TEXT,
-                is_encrypted INTEGER DEFAULT 0
-            )
-        """)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS scan_history (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                timestamp REAL,
-                target TEXT,
-                mode TEXT,
-                level TEXT,
-                summary TEXT
-            )
-        """)
-        conn.commit()
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        with conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS findings (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp REAL,
+                    target TEXT,
+                    tool TEXT,
+                    finding_type TEXT,
+                    content TEXT,
+                    is_encrypted INTEGER DEFAULT 0
+                )
+            """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS scan_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp REAL,
+                    target TEXT,
+                    mode TEXT,
+                    level TEXT,
+                    summary TEXT
+                )
+            """)
+    finally:
+        conn.close()
 
 def save_finding(target: str, tool: str, finding_type: str, content: str, encrypt: bool = False):
     init_database()
     saved_content = encrypt_data(content) if encrypt else content
-    with sqlite3.connect(DB_PATH) as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            "INSERT INTO findings (timestamp, target, tool, finding_type, content, is_encrypted) VALUES (?, ?, ?, ?, ?, ?)",
-            (time.time(), target, tool, finding_type, saved_content, 1 if encrypt else 0)
-        )
-        conn.commit()
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        with conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT INTO findings (timestamp, target, tool, finding_type, content, is_encrypted) VALUES (?, ?, ?, ?, ?, ?)",
+                (time.time(), target, tool, finding_type, saved_content, 1 if encrypt else 0)
+            )
+    finally:
+        conn.close()
 
 def save_scan_record(target: str, mode: str, level: str, summary: str):
     init_database()
-    with sqlite3.connect(DB_PATH) as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            "INSERT INTO scan_history (timestamp, target, mode, level, summary) VALUES (?, ?, ?, ?, ?)",
-            (time.time(), target, mode, level, summary)
-        )
-        conn.commit()
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        with conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT INTO scan_history (timestamp, target, mode, level, summary) VALUES (?, ?, ?, ?, ?)",
+                (time.time(), target, mode, level, summary)
+            )
+    finally:
+        conn.close()
+
+def save_recon_results(target: str, data: Dict[str, Any], encrypt: bool = False):
+    """Persist structured Recon intelligence findings to SQLite & Encrypted Vault."""
+    init_database()
+    # 1. Save extracted credentials / leaks
+    for cred in data.get("creds", []):
+        save_finding(target, tool="recon_crawler", finding_type="credential_leak", content=str(cred), encrypt=True)
+
+    # 2. Save open ports
+    ports = data.get("ports", {})
+    open_ports = [p for p, s in ports.items() if s == "open"]
+    if open_ports:
+        save_finding(target, tool="recon_portscan", finding_type="open_ports", content=f"Open: {open_ports}", encrypt=False)
+
+    # 3. Save subdomains
+    subs = data.get("subdomains", [])
+    if subs:
+        sub_names = [s.get("host", str(s)) if isinstance(s, dict) else str(s) for s in subs]
+        save_finding(target, tool="recon_subdomains", finding_type="subdomains", content=json.dumps(sub_names), encrypt=False)
+
+    # 4. Save tech stack
+    techs = data.get("technologies", [])
+    if techs:
+        save_finding(target, tool="recon_fingerprint", finding_type="technologies", content=json.dumps(techs), encrypt=False)
+
+    # 5. Save summary record
+    summary = f"Recon audit: {len(open_ports)} open ports, {len(subs)} subdomains, {len(data.get('endpoints', []))} endpoints, {len(data.get('creds', []))} leaks"
+    save_scan_record(target, mode=data.get("mode", "Recon"), level="recon", summary=summary)
+
 
 def get_recent_findings(limit: int = 15) -> List[Dict[str, Any]]:
     init_database()
-    with sqlite3.connect(DB_PATH) as conn:
+    conn = sqlite3.connect(DB_PATH)
+    try:
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM findings ORDER BY timestamp DESC LIMIT ?", (limit,))
@@ -95,6 +134,8 @@ def get_recent_findings(limit: int = 15) -> List[Dict[str, Any]]:
                 "content": content
             })
         return results
+    finally:
+        conn.close()
 
 def export_markdown_report(output_dir: Optional[Path] = None) -> Path:
     init_database()
@@ -104,9 +145,12 @@ def export_markdown_report(output_dir: Optional[Path] = None) -> Path:
     report_file = output_dir / f"audit_report_{int(time.time())}.md"
 
     findings = get_recent_findings(50)
-    with sqlite3.connect(DB_PATH) as conn:
+    conn = sqlite3.connect(DB_PATH)
+    try:
         conn.row_factory = sqlite3.Row
         scans = conn.cursor().execute("SELECT * FROM scan_history ORDER BY timestamp DESC LIMIT 20").fetchall()
+    finally:
+        conn.close()
 
     lines = [
         "# 🛡️ Web-Sec Executive Security & Reconnaissance Report",

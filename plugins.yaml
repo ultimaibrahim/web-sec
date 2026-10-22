@@ -9,13 +9,33 @@ plugins:
     ffuf:
       enabled: true
       binary: "/usr/bin/ffuf"
-      default_args: "-w /usr/share/wordlists/dirb/common.txt -mc 200,301,302"
+      default_args: "-w wordlists/routes_common.txt -mc 200,301,302"
       description: "Fuzzing web y descubrimiento de rutas ocultas"
+    gobuster:
+      enabled: true
+      binary: "gobuster"
+      default_args: "dir -q -t 10 --timeout 4s"
+      description: "Enumeración de rutas con diccionario local"
     subfinder:
-      enabled: false
+      enabled: true
       binary: "subfinder"
-      default_args: "-silent"
-      description: "Enumeración pasiva de subdominios"
+      default_args: "-silent -timeout 5"
+      description: "Enumeración pasiva de subdominios rápida"
+    amass:
+      enabled: true
+      binary: "amass"
+      default_args: "enum -passive -timeout 1"
+      description: "OWASP Amass: Mapeo de superficie de red y subdominios"
+    assetfinder:
+      enabled: true
+      binary: "assetfinder"
+      default_args: "--subs-only"
+      description: "Assetfinder: Descubrimiento ultra-ligero de dominios relacionados"
+    sublist3r:
+      enabled: true
+      binary: "sublist3r"
+      default_args: "-t 10 -n"
+      description: "Sublist3r: Multi-motor OSINT en Python para subdominios"
 
   vulnerability:
     sqlmap:
@@ -24,10 +44,36 @@ plugins:
       default_args: "--batch --risk=1 --level=1 --banner"
       description: "Auditoría no destructiva de SQL Injection"
     nuclei:
-      enabled: false
+      enabled: true
       binary: "nuclei"
-      default_args: "-t cves/ -severity critical,high"
-      description: "Escaneo de plantillas YAML de CVEs"
+      default_args: "-severity critical,high -silent"
+      description: "ProjectDiscovery Nuclei: Detección rápida de CVEs mediante plantillas YAML"
+    owasp_headers:
+      enabled: true
+      description: "Auditoría pasiva de cabeceras de seguridad HTTP (HSTS, CSP, X-Frame-Options)"
+    critical_leaks:
+      enabled: true
+      description: "Inspección de exposiciones críticas (.git, .env, sourcemaps)"
+
+  osint:
+    spiderfoot:
+      enabled: false
+      binary: "spiderfoot"
+      default_args: "-m sfp_whois,sfp_dnsresolve -q"
+      description: "SpiderFoot: Automatización integral de inteligencia OSINT"
+    securitytrails:
+      enabled: false
+      env_key: "SECURITYTRAILS_API_KEY"
+      description: "SecurityTrails API: Historial de registros DNS y subdominios pasivos"
+    shodan:
+      enabled: false
+      env_key: "SHODAN_API_KEY"
+      description: "Shodan API: Telemetría de puertos y servicios expuestos en IPv4"
+    censys:
+      enabled: false
+      env_id: "CENSYS_API_ID"
+      env_secret: "CENSYS_API_SECRET"
+      description: "Censys Search API: Búsqueda avanzada de certificados TLS y hosts"
 
   scraping:
     playwright:
@@ -37,11 +83,16 @@ plugins:
       description: "Renderizado dinámico de JavaScript y extracción SPA"
     beautifulsoup:
       enabled: true
-      parser: "lxml"
-      description: "Extracción y análisis de enlaces y metadatos HTML"
+      parser: "html.parser"
+      description: "Extracción y análisis de enlaces, formularios y scripts HTML"
+    deep_crawler:
+      enabled: true
+      max_depth: 2
+      max_pages: 25
+      description: "Crawler recursivo defensivo con extracción de tokens"
 
   credentials:
     regex_vault:
       enabled: true
-      rules: ["AWS AccessKey", "Microsoft Graph", "Generic API Key", "Bearer Token", "Private Key"]
-      description: "Inspección continua de tokens en tráfico HTTP"
+      rules: ["AWS AccessKey", "Microsoft Graph", "Generic API Key", "Bearer Token", "Private Key", "JWT"]
+      description: "Inspección continua de tokens y credenciales en tráfico HTTP"

@@ -1,0 +1,30 @@
+id: admin-consoles-exposure
+info:
+  name: Paneles de Diagnóstico y Administración Expuestos
+  author: Ibrahim Garcia
+  severity: ALTO
+  description: Detección de phpinfo(), Spring Boot Actuator, Apache Server Status o consolas administrativas sin protección.
+  impact: Fuga de versiones de paquetes, variables de entorno de memoria y telemetría sensible del servidor.
+  remediation: Deshabilitar o aislar endpoints de diagnóstico tras una VPN interna o autenticación mTLS/básica.
+
+requests:
+  - method: GET
+    path:
+      - /phpinfo.php
+      - /info.php
+      - /actuator/health
+      - /actuator/env
+      - /server-status
+      - /adminer.php
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+      - type: regex
+        regex:
+          - "(?:<title>phpinfo\\(\\)</title>|\"status\":\"UP\"|Apache Server Status|Adminer\\s+[0-9\\.]+)"
+      - type: negative-word
+        words:
+          - "Ups: not_found"
+          - "Error 404"

@@ -5,3 +5,8 @@ outputs/
 .env
 websec_vault.db
 .DS_Store
+
+# Audits outputs and heavy mirror dumps
+web_sec_auditor/audit_*/
+web_sec_auditor/venv/
+

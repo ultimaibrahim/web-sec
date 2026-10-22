@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web-Sec // Recon & Intelligence Audit Report - {{ data.target }}</title>
+    <style>
+        :root {
+            --bg-deep: #05070f;
+            --card-bg: rgba(13, 20, 36, 0.75);
+            --card-border: rgba(56, 189, 248, 0.2);
+            --card-glow: rgba(0, 240, 255, 0.12);
+            --accent-cyan: #00f0ff;
+            --accent-emerald: #10b981;
+            --accent-amber: #f59e0b;
+            --accent-rose: #f43f5e;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --text-dim: #64748b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-deep);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(0, 240, 255, 0.08) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.06) 0px, transparent 50%);
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            padding: 32px 20px;
+            line-height: 1.5;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        /* Glassmorphism & Squircles */
+        .squircle-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 12px 36px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        header.squircle-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            border-left: 4px solid var(--accent-cyan);
+        }
+
+        .title-badge {
+            display: inline-block;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--accent-cyan);
+            background: rgba(0, 240, 255, 0.1);
+            padding: 4px 10px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        h1 {
+            font-size: 1.75rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            color: #ffffff;
+        }
+
+        .target-sub {
+            color: var(--text-muted);
+            font-family: "JetBrains Mono", Consolas, monospace;
+            font-size: 0.95rem;
+            margin-top: 4px;
+        }
+
+        .meta-stats {
+            text-align: right;
+            font-family: "JetBrains Mono", Consolas, monospace;
+            font-size: 0.85rem;
+            color: var(--text-dim);
+        }
+
+        /* Grid Metrics */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .metric-card {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            border-radius: 14px;
+            padding: 18px;
+            text-align: center;
+            transition: transform 0.2s cubic-bezier(0.2, 1, 0.3, 1);
+        }
+
+        .metric-val {
+            font-size: 2.2rem;
+            font-weight: 800;
+            font-family: "JetBrains Mono", Consolas, monospace;
+            color: var(--accent-cyan);
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        /* Section Titles */
+        .section-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title::before {
+            content: "■";
+            color: var(--accent-cyan);
+            font-size: 0.9rem;
+        }
+
+        /* Tables & Lists */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.88rem;
+            font-family: "JetBrains Mono", Consolas, monospace;
+        }
+
+        th {
+            text-align: left;
+            padding: 10px 14px;
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--text-muted);
+            font-weight: 600;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        td {
+            padding: 10px 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            color: var(--text-main);
+        }
+
+        tr:hover td {
+            background: rgba(0, 240, 255, 0.03);
+        }
+
+        /* Pill Badges */
+        .pill {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .pill-open { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+        .pill-closed { background: rgba(244, 63, 94, 0.15); color: #fb7185; }
+        .pill-tech { background: rgba(0, 240, 255, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.25); }
+        .pill-warn { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+
+        .tech-cloud {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .leak-box {
+            background: rgba(244, 63, 94, 0.08);
+            border: 1px dashed rgba(244, 63, 94, 0.35);
+            border-radius: 10px;
+            padding: 12px 16px;
+            margin-top: 8px;
+            color: #fda4af;
+            font-family: "JetBrains Mono", Consolas, monospace;
+            font-size: 0.85rem;
+            word-break: break-all;
+        }
+
+        footer {
+            text-align: center;
+            font-size: 0.78rem;
+            color: var(--text-dim);
+            margin-top: 32px;
+            padding: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="squircle-card">
+            <div>
+                <span class="title-badge">Web-Sec Cyber-Deck // Recon Intelligence</span>
+                <h1>{{ data.target }}</h1>
+                <div class="target-sub">TARGET SCOPE AUDITED &bull; WHITELIST VERIFIED</div>
+            </div>
+            <div class="meta-stats">
+                <div>AUDIT RUN: {{ data.timestamp | default("NOW") }}</div>
+                <div>MODE: {{ data.mode | default("Recon") }} &bull; ENGINE: DEFENSIVE</div>
+            </div>
+        </header>
+
+        <!-- Metrics -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-val">{{ data.open_ports | length if data.open_ports is defined else (data.ports.values() | select("equalto", "open") | list | length if data.ports is defined else 0) }}</div>
+                <div class="metric-label">Puertos Abiertos</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-val">{{ data.subdomains | length if data.subdomains is defined else 0 }}</div>
+                <div class="metric-label">Subdominios Vivos</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-val">{{ data.endpoints | length if data.endpoints is defined else 0 }}</div>
+                <div class="metric-label">Rutas Descubiertas</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-val" style="color: {{ 'var(--accent-rose)' if data.creds else 'var(--accent-emerald)' }};">{{ data.creds | length if data.creds is defined else 0 }}</div>
+                <div class="metric-label">Fugas / Credenciales</div>
+            </div>
+        </div>
+
+        <!-- Tech Stack -->
+        {% if data.technologies or data.fingerprint %}
+        <div class="squircle-card">
+            <div class="section-title">Tecnologías Detectadas (Wappalyzer Clone)</div>
+            <div class="tech-cloud">
+                {% if data.technologies %}
+                    {% for tech in data.technologies %}
+                        <span class="pill pill-tech">{{ tech.name if tech.name is defined else tech }} {% if tech.category is defined %}<small>({{ tech.category }})</small>{% endif %}</span>
+                    {% endfor %}
+                {% endif %}
+                {% if data.fingerprint and data.fingerprint.items %}
+                    {% for k, v in data.fingerprint.items() %}
+                        <span class="pill pill-tech"><strong>{{ k }}:</strong> {{ v }}</span>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Ports -->
+        {% if data.ports %}
+        <div class="squircle-card">
+            <div class="section-title">Inspección de Puertos TCP</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Puerto</th>
+                        <th>Estado</th>
+                        <th>Servicio Estándar</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for port, status in data.ports.items() %}
+                    {% if status == "open" or not data.open_ports %}
+                    <tr>
+                        <td><strong>{{ port }}</strong></td>
+                        <td><span class="pill {{ 'pill-open' if status == 'open' else 'pill-closed' }}">{{ status | upper }}</span></td>
+                        <td>
+                            {% if port == 80 %}HTTP
+                            {% elif port == 443 %}HTTPS (SSL/TLS)
+                            {% elif port == 22 %}SSH
+                            {% elif port == 21 %}FTP
+                            {% elif port == 3306 %}MySQL
+                            {% elif port == 5432 %}PostgreSQL
+                            {% elif port == 8080 %}HTTP-Proxy / Alt
+                            {% elif port == 8443 %}HTTPS-Alt
+                            {% else %}Unknown Service
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        <!-- Subdomains -->
+        {% if data.subdomains %}
+        <div class="squircle-card">
+            <div class="section-title">Subdominios Descubiertos</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Host FQDN</th>
+                        <th>IP Resuelta</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sub in data.subdomains %}
+                    <tr>
+                        <td><strong>{{ sub.host if sub.host is defined else (sub.subdomain if sub.subdomain is defined else sub) }}</strong></td>
+                        <td>{{ sub.ip if sub.ip is defined else "DNS Resolv" }}</td>
+                        <td><span class="pill pill-open">ONLINE</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        <!-- Endpoints & Leaks -->
+        {% if data.endpoints or data.creds %}
+        <div class="squircle-card">
+            <div class="section-title">Rutas Rastreadas y Credenciales</div>
+            {% if data.creds %}
+            <h4 style="color: var(--accent-rose); margin-bottom: 8px;">Credenciales / Tokens Expuestos:</h4>
+            {% for c in data.creds %}
+            <div class="leak-box">{{ c }}</div>
+            {% endfor %}
+            <br>
+            {% endif %}
+
+            {% if data.endpoints %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Endpoint / Ruta</th>
+                        <th>Tipo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ep in data.endpoints %}
+                    <tr>
+                        <td>{{ ep }}</td>
+                        <td><span class="pill pill-tech">DISCOVERED</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <footer>
+            Generado por Web-Sec Executive Suite &bull; Crystal &amp; Squircle Design System &bull; Ibrahim Garc&iacute;a
+        </footer>
+    </div>
+</body>
+</html>

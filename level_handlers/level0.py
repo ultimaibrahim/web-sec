@@ -4,7 +4,7 @@ try:
 except ImportError:
     from textual.widgets import TextLog
 
-def run(target: str, mode: str, logger: TextLog, use_browser: bool = False):
+def run(target: str, mode: str, logger: TextLog, use_browser: bool = False, **kwargs):
     """Level 0 – Passive reconnaissance.
 
     Performs a HEAD request to fetch headers without a body.

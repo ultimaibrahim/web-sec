@@ -100,6 +100,14 @@ Footer {
     row-span: 1;
 }
 
+#progress-bar {
+    height: 1;
+    background: #060b17;
+    color: #38bdf8;
+    padding: 0 1;
+    border-bottom: solid #1e293b;
+}
+
 RichLog, TextLog {
     background: #03050a;
     color: #94a3b8;

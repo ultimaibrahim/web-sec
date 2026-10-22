@@ -1,0 +1,28 @@
+id: git-repo-exposure
+info:
+  name: Exposición de Repositorio Git (.git)
+  author: Ibrahim Garcia
+  severity: CRÍTICO
+  description: El directorio de control de versiones .git o su archivo de configuración está expuesto públicamente.
+  impact: Fuga del 100% del código fuente, historial de commits y credenciales históricas.
+  remediation: Denegar el acceso a la carpeta .git en la configuración del proxy inverso o servidor web.
+
+requests:
+  - method: GET
+    path:
+      - /.git/config
+      - /.git/HEAD
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+      - type: regex
+        regex:
+          - "\\[core\\]"
+          - "ref: refs/heads"
+        condition: or
+      - type: negative-word
+        words:
+          - "<html"
+          - "<!doctype"

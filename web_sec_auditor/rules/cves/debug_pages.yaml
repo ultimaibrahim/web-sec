@@ -1,0 +1,28 @@
+id: debug-pages-exposure
+info:
+  name: Modos de Depuración y Stack Traces Activos (Werkzeug/Django/Laravel)
+  author: Ibrahim Garcia
+  severity: ALTO
+  description: La aplicación web corre con modo DEBUG habilitado, revelando trazas de error interactivas o consolas.
+  impact: Fuga de rutas absolutas de archivos, código fuente en memoria y potenciales vectores de ejecución si la consola es interactiva.
+  remediation: Configurar DEBUG=False o APP_DEBUG=false en variables de producción.
+
+requests:
+  - method: GET
+    path:
+      - /console
+      - /_debug_toolbar/
+      - /telescope
+      - /__clockwork
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+      - type: regex
+        regex:
+          - "(?:Werkzeug powered traceback interpreter|Django Debug Toolbar|Laravel Telescope|Clockwork)"
+      - type: negative-word
+        words:
+          - "Ups: not_found"
+          - "404 Not Found"

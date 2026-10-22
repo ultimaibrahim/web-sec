@@ -1,0 +1,31 @@
+id: env-file-exposure
+info:
+  name: Exposición Pública de Archivos de Entorno (.env)
+  author: Ibrahim Garcia
+  severity: CRÍTICO
+  description: Detección de variables de entorno (.env) accesibles directamente sin autenticación.
+  impact: Fuga de credenciales críticas de base de datos, API keys, llaves maestras y contraseñas.
+  remediation: Bloquear peticiones a archivos que inicien con punto (.) en el servidor web (Nginx/Apache/Caddy).
+
+requests:
+  - method: GET
+    path:
+      - /.env
+      - /.env.local
+      - /.env.production
+      - /.env.backup
+      - /.env.example
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+      - type: regex
+        regex:
+          - "(?:DB_|DATABASE_|APP_KEY|SECRET_KEY|API_KEY|PASSWORD|AWS_)"
+      - type: negative-word
+        words:
+          - "<html"
+          - "<!doctype"
+          - "Ups: not_found"
+          - "404 Not Found"

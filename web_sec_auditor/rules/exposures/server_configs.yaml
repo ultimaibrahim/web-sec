@@ -1,0 +1,28 @@
+id: server-configs-exposure
+info:
+  name: Exposición de Archivos de Configuración del Servidor
+  author: Ibrahim Garcia
+  severity: ALTO
+  description: Archivos como web.config, .htaccess o docker-compose expuestos en rutas públicas.
+  impact: Revelación de arquitectura interna, reglas de reescritura de URLs y credenciales de servicios.
+  remediation: Restringir acceso a archivos de configuración de IIS, Apache y Docker.
+
+requests:
+  - method: GET
+    path:
+      - /web.config
+      - /.htaccess
+      - /docker-compose.yml
+      - /Dockerfile
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+      - type: regex
+        regex:
+          - "(?:<configuration>|RewriteEngine|services:|FROM\\s+[a-zA-Z0-9_]+)"
+      - type: negative-word
+        words:
+          - "<html"
+          - "<!doctype"

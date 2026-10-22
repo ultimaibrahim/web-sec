@@ -134,6 +134,10 @@ class RichLiveDeck:
             city="",
             mac_spoofed=False,
             current_mac="Reading...",
+            tcp_timestamps_off=False,
+            timezone_utc=False,
+            hostname_clean=False,
+            current_hostname="Reading...",
             score=0,
             threat_level="PROBING"
         )

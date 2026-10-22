@@ -28,6 +28,10 @@ class PrivacyStatus:
     city: str
     mac_spoofed: bool
     current_mac: str
+    tcp_timestamps_off: bool
+    timezone_utc: bool
+    hostname_clean: bool
+    current_hostname: str
     score: int
     threat_level: str
 
@@ -77,14 +81,15 @@ def check_ipv6_leak() -> bool:
     """Verifica si IPv6 está bloqueado (evita fuga de IP real)."""
     try:
         req = urllib.request.Request("https://ifconfig.co", headers={"User-Agent": "curl/7.68.0"})
-        # Forzamos resolver solo IPv6 si fuera posible, o probar socket af_inet6
         s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
         s.settimeout(2.0)
-        # Conectar a Google DNS v6
-        s.connect(("2001:4860:4860::8888", 53))
-        s.close()
-        # Si conecta, IPv6 no está bloqueado -> posible fuga
-        return False
+        try:
+            # Conectar a Google DNS v6
+            s.connect(("2001:4860:4860::8888", 53))
+            # Si conecta, IPv6 no está bloqueado -> posible fuga
+            return False
+        finally:
+            s.close()
     except Exception:
         # Si falló la conexión por IPv6, significa que está bloqueado correctamente
         return True
@@ -140,6 +145,39 @@ def check_mac_address() -> tuple[bool, str]:
     is_spoofed = (current_mac != FACTORY_MAC.lower())
     return is_spoofed, current_mac
 
+def check_tcp_timestamps() -> bool:
+    """Verifica si TCP timestamps están apagados (evita OS fingerprinting por uptime)."""
+    ts_path = Path("/proc/sys/net/ipv4/tcp_timestamps")
+    if ts_path.exists():
+        try:
+            return ts_path.read_text().strip() == "0"
+        except Exception:
+            pass
+    return False
+
+def check_timezone_utc() -> bool:
+    """Verifica si la zona horaria del sistema está en UTC (evita geolocalización por timezone)."""
+    try:
+        res = subprocess.run(["timedatectl"], capture_output=True, text=True, timeout=2)
+        if "Time zone: UTC" in res.stdout or "Universal" in res.stdout:
+            return True
+        # Alternativa leyendo /etc/timezone
+        tz_file = Path("/etc/timezone")
+        if tz_file.exists() and "etc/utc" in tz_file.read_text().lower():
+            return True
+    except Exception:
+        pass
+    import time
+    return time.tzname[0].upper() == "UTC"
+
+def check_hostname_privacy() -> tuple[bool, str]:
+    """Verifica si el hostname es genérico y no delata el usuario o modelo de máquina."""
+    host = socket.gethostname().lower()
+    # Si contiene nombres personales, marcas o identificadores
+    leaks = ["ibrahim", "ultima", "laptop", "desktop", "macbook", "thinkpad"]
+    is_leaking = any(w in host for w in leaks)
+    return (not is_leaking), host
+
 def evaluate_privacy() -> PrivacyStatus:
     """Evalúa todos los vectores de privacidad y calcula un score."""
     vpn_ok, vpn_iface = check_vpn_tunnel()
@@ -147,20 +185,25 @@ def evaluate_privacy() -> PrivacyStatus:
     ipv6_ok = check_ipv6_leak()
     pub_ip, org, country, city = get_public_ip_info()
     mac_ok, mac_addr = check_mac_address()
+    tcp_ts_ok = check_tcp_timestamps()
+    tz_ok = check_timezone_utc()
+    host_ok, host_name = check_hostname_privacy()
 
     # Cálculo ponderado de Privacy Score (0 a 100)
     score = 0
     if vpn_ok:
-        score += 35
+        score += 30
     if dns_ok:
-        score += 25
+        score += 20
     if ipv6_ok:
-        score += 15
-    if mac_ok:
-        score += 15
-    if "proton" in org.lower() or "vpn" in org.lower() or "datacenter" in org.lower() or "m247" in org.lower():
         score += 10
-    elif pub_ip != "Desconectado" and vpn_ok:
+    if mac_ok:
+        score += 10
+    if tcp_ts_ok:
+        score += 10
+    if tz_ok:
+        score += 10
+    if host_ok:
         score += 10
 
     if score >= 85:
@@ -182,9 +225,54 @@ def evaluate_privacy() -> PrivacyStatus:
         city=city,
         mac_spoofed=mac_ok,
         current_mac=mac_addr,
+        tcp_timestamps_off=tcp_ts_ok,
+        timezone_utc=tz_ok,
+        hostname_clean=host_ok,
+        current_hostname=host_name,
         score=score,
         threat_level=threat
     )
+
+def enforce_shield_lock(level: str) -> tuple[bool, str]:
+    """Valida si los escudos permiten la ejecución del nivel solicitado.
+    Para niveles agresivos (Level 3, void, void_plus), exige túnel VPN o interfaz aislada.
+    """
+    lvl = str(level).strip().lower()
+    high_risk_levels = ["3", "level3", "void", "void()", "void_plus", "void_plus()"]
+    
+    if lvl not in high_risk_levels:
+        return True, "Nivel de bajo impacto autorizado."
+
+    status = evaluate_privacy()
+    
+    # Comprobar si hay túnel activo (VPN, Wireguard, Proton o Tor SOCKS5 local)
+    has_tor_socks = False
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(0.5)
+        res = s.connect_ex(("127.0.0.1", 9050))
+        if res == 0:
+            has_tor_socks = True
+        s.close()
+    except Exception:
+        pass
+
+    if not status.vpn_active and not has_tor_socks:
+        msg = (
+            f"[CRITICAL ABORT] SHIELD LOCK ENFORCED:\n"
+            f"El nivel '{level}' genera tráfico anómalo, mutación destructiva y/o fuzzing masivo.\n"
+            f"Se detectó conexión directa en interfaz física sin túnel de anonimato.\n"
+            f"• VPN: INACTIVA\n"
+            f"• Tor (9050): INACTIVO\n"
+            f"• IP Pública Expuesta: {status.public_ip} ({status.isp_org})\n\n"
+            f"ACCIÓN REQUERIDA:\n"
+            f"1. Levante un túnel VPN (Proton/Wireguard) o inicie el demonio Tor.\n"
+            f"2. Se recomienda ejecutar esta suite dentro de una VM aislada (Tails OS / Parrot OS).\n"
+            f"3. Para transferir evidencias y volcados, utilice canales cifrados P2P como 'Magic-Wormhole'."
+        )
+        return False, msg
+
+    return True, f"Escudos verificados para {level}. Túnel activo: {status.vpn_interface if status.vpn_active else 'Tor SOCKS5 (9050)'}"
 
 if __name__ == "__main__":
     from rich.console import Console
@@ -218,6 +306,21 @@ if __name__ == "__main__":
         "MAC Spoofing",
         "[bold green]PROTEGIDA (ALEATORIA)[/]" if status.mac_spoofed else "[bold red]FÁBRICA (EXPUESTA)[/]",
         status.current_mac
+    )
+    table.add_row(
+        "TCP Timestamps (OS Uptime)",
+        "[bold green]APAGADO (OK)[/]" if status.tcp_timestamps_off else "[bold red]ACTIVO (FUGA UPTIME)[/]",
+        "Anti-p0f fingerprinting" if status.tcp_timestamps_off else "sysctl net.ipv4.tcp_timestamps=1"
+    )
+    table.add_row(
+        "Zona Horaria (Timezone)",
+        "[bold green]UTC (NEUTRAL)[/]" if status.timezone_utc else "[bold red]LOCAL (FUGA GEO)[/]",
+        "UTC" if status.timezone_utc else "Zona local expuesta"
+    )
+    table.add_row(
+        "Hostname Limpio",
+        "[bold green]GENÉRICO (OK)[/]" if status.hostname_clean else "[bold red]PERSONAL (EXPUESTO)[/]",
+        status.current_hostname
     )
     table.add_row(
         "Dirección IP WAN",
