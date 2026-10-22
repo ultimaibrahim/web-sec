@@ -127,11 +127,11 @@ def ensure_disk(key: str) -> Path:
 
 def launch_parrot():
     info = ISOS["parrot"]
-    if not info["file"].exists():
-        console.print("[red]Primero descarga la ISO de Parrot OS (Opción 1).[/]")
+    disk = info["disk"]
+    if not disk.exists():
+        console.print("[red]El disco virtual parrot_security.qcow2 no fue encontrado en /home/ultimau/vms/disks/[/]")
         return
-    disk = ensure_disk("parrot")
-    console.print(f"[bold green]⚡ Lanzando Parrot Security en QEMU/KVM...[/]")
+    console.print(f"[bold green]⚡ Lanzando Parrot Security QEMU/KVM en modo nativo...[/]")
     cmd = [
         "qemu-system-x86_64",
         "-enable-kvm",
@@ -139,8 +139,6 @@ def launch_parrot():
         "-smp", "4",
         "-m", "6G",
         "-drive", f"file={disk},if=virtio,format=qcow2",
-        "-cdrom", str(info["file"]),
-        "-boot", "menu=on",
         "-vga", "virtio",
         "-display", "gtk,gl=on",
         "-net", "nic,model=virtio",
@@ -149,7 +147,7 @@ def launch_parrot():
         "-device", "usb-tablet"
     ]
     subprocess.Popen(cmd)
-    console.print("[green]✔ Ventana de Parrot OS iniciada con aceleración KVM.[/]")
+    console.print("[green]✔ Parrot Security iniciado con aceleración KVM y OpenGL.[/]")
 
 def launch_tails():
     info = ISOS["tails"]
