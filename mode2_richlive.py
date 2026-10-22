@@ -102,19 +102,24 @@ class RobustTerminalReader:
 
         first = sys.stdin.read(1)
         if first == '\x1b':
-            time.sleep(0.01)
+            # Esperar brevemente para capturar la ráfaga completa de la secuencia de escape (Alacritty/Xterm)
+            time.sleep(0.025)
             seq = ""
-            while select.select([sys.stdin], [], [], 0)[0]:
+            while select.select([sys.stdin], [], [], 0.01)[0]:
                 seq += sys.stdin.read(1)
 
-            if seq == "[C" or seq == "OC":
+            if seq in ("[C", "OC", "[1;5C", "[1;2C"):
                 return "KEY_RIGHT"
-            elif seq == "[D" or seq == "OD":
+            elif seq in ("[D", "OD", "[1;5D", "[1;2D"):
                 return "KEY_LEFT"
-            elif seq == "[A" or seq == "OA":
+            elif seq in ("[A", "OA", "[1;5A", "[1;2A"):
                 return "KEY_UP"
-            elif seq == "[B" or seq == "OB":
+            elif seq in ("[B", "OB", "[1;5B", "[1;2B"):
                 return "KEY_DOWN"
+            elif seq in ("[5~", "[[5~"):  # Page Up
+                return "KEY_PAGE_UP"
+            elif seq in ("[6~", "[[6~"):  # Page Down
+                return "KEY_PAGE_DOWN"
             elif not seq:
                 return "KEY_ESC"
             return "UNKNOWN_ESC"
@@ -876,16 +881,16 @@ class RichLiveDeck:
         else:
             foot_text = Text.from_markup(
                 "[bold cyan][ENTER / :][/] [white]Escribir[/]  "
+                "[bold cyan][←/→ ó h/l][/] [white]Scroll H[/]  "
+                "[bold cyan][↑/↓ ó j/k][/] [white]Scroll V[/]  "
+                "[bold cyan][W][/] [white]Wrap[/]  "
                 "[bold cyan][K][/] [yellow]Armar Escudos[/]  "
                 "[bold cyan][X][/] [magenta]Desarmar/Sellar[/]  "
                 "[bold cyan][S][/] [white]Stealth[/]  "
                 "[bold cyan][D][/] [white]DryRun[/]  "
-                "[bold cyan][← / →][/] [white]Scroll H[/]  "
-                "[bold cyan][↑ / ↓][/] [white]Scroll V[/]  "
-                "[bold cyan][W][/] [white]Wrap[/]  "
                 "[bold cyan][SPACE][/] [white]Start[/]  "
                 "[bold cyan][M][/] [white]Mode[/]  "
-                "[bold cyan][L][/] [white]Level[/]  "
+                "[bold cyan][O][/] [white]Level[/]  "
                 "[bold cyan][Q][/] [white]Quit[/]"
             )
         layout["footer"].update(foot_text)
@@ -914,14 +919,18 @@ class RichLiveDeck:
 
                         # 2. MODO COMANDO / NAVEGACIÓN
                         else:
-                            if key == "KEY_RIGHT":
+                            if key in ("KEY_RIGHT", "l"):
                                 self.h_offset += 8
-                            elif key == "KEY_LEFT":
+                            elif key in ("KEY_LEFT", "h"):
                                 self.h_offset = max(0, self.h_offset - 8)
-                            elif key == "KEY_UP":
+                            elif key in ("KEY_UP", "k"):
                                 self.v_offset = min(len(self.logs) - 5, self.v_offset + 3)
-                            elif key == "KEY_DOWN":
+                            elif key in ("KEY_DOWN", "j"):
                                 self.v_offset = max(0, self.v_offset - 3)
+                            elif key == "KEY_PAGE_UP":
+                                self.v_offset = min(len(self.logs) - 5, self.v_offset + 10)
+                            elif key == "KEY_PAGE_DOWN":
+                                self.v_offset = max(0, self.v_offset - 10)
                             elif key in ('\r', '\n', ':', 'i', 'I'):
                                 self.input_mode = True
                                 if key == ':':
@@ -929,7 +938,7 @@ class RichLiveDeck:
                             elif key in ('w', 'W'):
                                 self.wrap_mode = not self.wrap_mode
                                 self.log(f"[dim]Modo Wrap:[/] {'[green]ON[/]' if self.wrap_mode else '[yellow]OFF[/]'}")
-                            elif key in ('k', 'K'):
+                            elif key in ('K',):  # Shift+K para escudos (o escribir :shields)
                                 self.execute_command(":shields")
                             elif key in ('x', 'X'):
                                 self.execute_command(":disarm")
@@ -967,7 +976,7 @@ class RichLiveDeck:
                                     self.log(f"[bold yellow]Mode cycled to:[/] [bold yellow]{self.mode} (OSINT, SUBDOMAINS & SURFACE INTEL)[/]")
                                 else:
                                     self.log(f"[dim]Mode cycled to:[/] [cyan]{self.mode}[/]")
-                            elif key in ('l', 'L'):
+                            elif key in ('o', 'O'):  # Cambiar nivel
                                 lvls = ["0", "1", "2", "3", "void"]
                                 idx = (lvls.index(self.level) + 1) % len(lvls)
                                 self.level = lvls[idx]
