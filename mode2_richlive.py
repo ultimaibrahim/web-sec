@@ -446,7 +446,7 @@ class RichLiveDeck:
                 self.log(f"[cyan]Modo Wrap de texto:[/] {'[bold green]ACTIVADO[/]' if self.wrap_mode else '[bold yellow]DESACTIVADO (Scroll H)[/]'}")
                 return
             elif first_word == "mode":
-                modes = ["WebSec", "WebScrap", "WebScan", "BlueTeam"]
+                modes = ["WebSec", "WebScrap", "WebRecon", "BlueTeam"]
                 idx = (modes.index(self.mode) + 1) % len(modes) if self.mode in modes else 0
                 self.mode = modes[idx]
                 if self.mode == "BlueTeam":
@@ -456,13 +456,13 @@ class RichLiveDeck:
                     except Exception:
                         pass
                     self.log(f"[bold red]Modo cambiado a:[/] [bold red]{self.mode} (DEFENSE & TARPIT ARMED)[/]")
-                elif self.mode == "WebScan":
+                elif self.mode == "WebRecon":
                     try:
                         from sound_effects import play_shield_on
                         play_shield_on()
                     except Exception:
                         pass
-                    self.log(f"[bold yellow]Modo cambiado a:[/] [bold yellow]{self.mode} (PASSIVE SURFACE & NUCLEI MAPPING)[/]")
+                    self.log(f"[bold yellow]Modo cambiado a:[/] [bold yellow]{self.mode} (OSINT, SUBDOMAINS & SURFACE INTEL)[/]")
                 else:
                     self.log(f"[dim]Modo cambiado a:[/] [bold cyan]{self.mode}[/]")
                 return
@@ -571,11 +571,11 @@ class RichLiveDeck:
                 "tag": "[bold magenta]🕷️ PASSIVE EXTRACTION & SCRAP[/]",
                 "header_badge": "bold magenta"
             },
-            "WebScan": {
+            "WebRecon": {
                 "accent": "bold yellow",
                 "border_main": "yellow",
                 "border_stream": "yellow",
-                "tag": "[bold yellow]📡 RECON & SURFACE MAPPING[/]",
+                "tag": "[bold yellow]📡 OSINT & RECON INTELLIGENCE[/]",
                 "header_badge": "bold yellow"
             },
             "BlueTeam": {
@@ -803,7 +803,7 @@ class RichLiveDeck:
                             elif key == ' ':
                                 self.trigger_audit()
                             elif key in ('m', 'M'):
-                                modes = ["WebSec", "WebScrap", "WebScan", "BlueTeam"]
+                                modes = ["WebSec", "WebScrap", "WebRecon", "BlueTeam"]
                                 idx = (modes.index(self.mode) + 1) % len(modes) if self.mode in modes else 0
                                 self.mode = modes[idx]
                                 if self.mode == "BlueTeam":
@@ -813,13 +813,13 @@ class RichLiveDeck:
                                     except Exception:
                                         pass
                                     self.log(f"[bold red]Mode cycled to:[/] [bold red]{self.mode} (DEFENSE & TARPIT ARMED)[/]")
-                                elif self.mode == "WebScan":
+                                elif self.mode == "WebRecon":
                                     try:
                                         from sound_effects import play_shield_on
                                         play_shield_on()
                                     except Exception:
                                         pass
-                                    self.log(f"[bold yellow]Mode cycled to:[/] [bold yellow]{self.mode} (PASSIVE SURFACE & NUCLEI MAPPING)[/]")
+                                    self.log(f"[bold yellow]Mode cycled to:[/] [bold yellow]{self.mode} (OSINT, SUBDOMAINS & SURFACE INTEL)[/]")
                                 else:
                                     self.log(f"[dim]Mode cycled to:[/] [cyan]{self.mode}[/]")
                             elif key in ('l', 'L'):
