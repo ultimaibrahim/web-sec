@@ -17,6 +17,7 @@ import tty
 import threading
 import subprocess
 import shutil
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Set, List, Dict, Any, Optional
@@ -39,6 +40,11 @@ from browser_client import set_stealth_mode, is_stealth_enabled
 PROJECT_DIR = Path(__file__).parent.resolve()
 WHITELIST_PATH = PROJECT_DIR / "allowed_targets.txt"
 SPARK_CHARS = " ▂▃▄▅▆▇█"
+ANSI_ESCAPE_RE = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+
+def strip_ansi(text: str) -> str:
+    """Elimina secuencias de escape ANSI para cálculo tipográfico exacto."""
+    return ANSI_ESCAPE_RE.sub("", text)
 
 TEXT_FADE_PALETTE = [
     "#cbd5e1",
@@ -59,24 +65,25 @@ def save_whitelist(domains: Set[str]):
     WHITELIST_PATH.write_text("\n".join(sorted(domains)))
 
 def render_scrolled_line(text: str, offset: int, max_visible: int, base_style: str = "white") -> Text:
-    t = Text()
+    t = Text(no_wrap=True, overflow="crop")
+    clean = strip_ansi(text)
     if offset > 0:
         t.append("« ", style="bold yellow")
-        max_visible -= 2
+        max_visible = max(2, max_visible - 2)
 
-    sliced = text[offset:]
+    sliced = clean[offset:]
     if len(sliced) <= max_visible:
-        t.append(sliced, style=base_style)
+        t.append(sliced[:max_visible], style=base_style)
         return t
 
-    fade_len = len(TEXT_FADE_PALETTE)
+    fade_len = min(len(TEXT_FADE_PALETTE), max_visible)
     solid_len = max(0, max_visible - fade_len)
     t.append(sliced[:solid_len], style=base_style)
 
-    for i, col in enumerate(TEXT_FADE_PALETTE):
+    for i in range(fade_len):
         idx = solid_len + i
         if idx < len(sliced):
-            t.append(sliced[idx], style=col)
+            t.append(sliced[idx], style=TEXT_FADE_PALETTE[i])
 
     return t
 
@@ -526,12 +533,14 @@ class RichLiveDeck:
                             stdout, stderr = proc.stdout, proc.stderr
 
                         for line in stdout.splitlines():
-                            if line.strip():
-                                self.log(f"[dim]  › {escape(line.strip())}[/]")
+                            clean_line = strip_ansi(line).strip()
+                            if clean_line:
+                                self.log(f"[dim]  › {escape(clean_line)}[/]")
                         if stderr:
                             for eline in stderr.splitlines():
-                                if "password" not in eline.lower() and eline.strip():
-                                    self.log(f"[dim red]  ! {escape(eline.strip())}[/]")
+                                clean_eline = strip_ansi(eline).strip()
+                                if "password" not in clean_eline.lower() and clean_eline:
+                                    self.log(f"[dim red]  ! {escape(clean_eline)}[/]")
 
                         try:
                             from sound_effects import play_shield_on
@@ -581,12 +590,12 @@ class RichLiveDeck:
                 if proc.stdout:
                     lines = proc.stdout.splitlines()
                     for line in lines[:30]:
-                        self.log(f"  [dim]│[/] {escape(line)}")
+                        self.log(f"  [dim]│[/] {escape(strip_ansi(line))}")
                     if len(lines) > 30:
                         self.log(f"  [dim]│ ... ({len(lines) - 30} líneas más)[/]")
                 if proc.stderr:
                     for line in proc.stderr.splitlines()[:5]:
-                        self.log(f"  [red]│[/] {escape(line)}")
+                        self.log(f"  [red]│[/] {escape(strip_ansi(line))}")
                 if proc.returncode != 0 and not proc.stderr:
                     self.log(f"  [red]Proceso terminó con código {proc.returncode}[/]")
             except subprocess.TimeoutExpired:
@@ -736,7 +745,8 @@ class RichLiveDeck:
         layout["controls"].update(Panel(ctrl_table, title=f"[{theme['accent']}]3. ENGINE & PLUGINS[/]", border_style=theme["border_main"]))
 
         # Center: Stream Logs
-        center_width = max(20, term_width - 66)
+        # El panel central tiene margen de 2 columnas para bordes
+        center_width = max(20, term_width - 68)
         slice_end = len(self.logs) - self.v_offset if self.v_offset > 0 else len(self.logs)
         slice_start = max(0, slice_end - 22)
         visible_logs = self.logs[slice_start:slice_end]
@@ -744,9 +754,10 @@ class RichLiveDeck:
         formatted_logs = []
         for l in visible_logs:
             if self.wrap_mode:
-                formatted_logs.append(Text.from_markup(l))
+                clean_l = strip_ansi(l)
+                formatted_logs.append(Text.from_markup(clean_l))
             else:
-                plain = Text.from_markup(l).plain
+                plain = strip_ansi(Text.from_markup(l).plain)
                 formatted_logs.append(render_scrolled_line(plain, self.h_offset, center_width))
 
         stream_group = Text("\n").join(formatted_logs)

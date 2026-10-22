@@ -39,7 +39,7 @@ class PrivacyStatus:
         return asdict(self)
 
 def check_vpn_tunnel() -> tuple[bool, str]:
-    """Revisa si el túnel proton0 o wg0 está activo."""
+    """Revisa si el túnel proton0, wg0 o Tor SOCKS5 está activo."""
     for iface in ["proton0", "proton", "wg0", "tun0"]:
         try:
             res = subprocess.run(
@@ -52,6 +52,18 @@ def check_vpn_tunnel() -> tuple[bool, str]:
                 return True, iface
         except Exception:
             pass
+
+    # Verificación secundaria: Demonio Tor en 127.0.0.1:9050
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(0.6)
+        res = s.connect_ex(("127.0.0.1", 9050))
+        s.close()
+        if res == 0:
+            return True, "tor:9050"
+    except Exception:
+        pass
+
     return False, "None"
 
 def check_dns_security() -> tuple[bool, str]:
@@ -73,8 +85,19 @@ def check_dns_security() -> tuple[bool, str]:
         return False, f"Err: {e}"
 
     primary = servers[0] if servers else "Unknown"
-    # Si apunta a 10.2.0.1 (Proton), 1.1.1.1, 9.9.9.9, o 127.0.0.53 con DoT
-    is_tunnel_dns = "10.2.0.1" in servers or "10.2.0." in primary
+    # Si apunta a 10.2.0.1 (Proton), 1.1.1.1, 9.9.9.9, 127.0.0.1 (Tor DNS/dnscrypt) o 127.0.0.53 con DoT
+    is_tunnel_dns = "10.2.0.1" in servers or "10.2.0." in primary or "1.1.1.1" in servers or "9.9.9.9" in servers
+    
+    # Si Tor SOCKS está activo en 9050, el motor web/recon de la suite resuelve remotamente por SOCKS5 (sin DNS leak en host)
+    if not is_tunnel_dns:
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(0.5)
+                if s.connect_ex(("127.0.0.1", 9050)) == 0:
+                    return True, "Tor SOCKS-DNS"
+        except Exception:
+            pass
+
     return is_tunnel_dns, primary
 
 def check_ipv6_leak() -> bool:
@@ -95,7 +118,27 @@ def check_ipv6_leak() -> bool:
         return True
 
 def get_public_ip_info() -> tuple[str, str, str, str]:
-    """Obtiene la IP pública e información de geolocalización ligera."""
+    """Obtiene la IP pública e información de geolocalización ligera.
+    Si Tor está activo y no hay VPN a nivel de interfaz de red del sistema,
+    resuelve la IP de salida de la red Tor para reportar la identidad anónima de la sesión.
+    """
+    # Si Tor SOCKS está activo y no hay interfaz VPN física levantada, reportar la IP de salida Tor
+    vpn_active, vpn_iface = check_vpn_tunnel()
+    if vpn_active and vpn_iface.startswith("tor:"):
+        try:
+            res = subprocess.run(
+                ["curl", "-s", "--socks5", "127.0.0.1:9050", "--max-time", "4", "https://check.torproject.org/api/ip"],
+                capture_output=True,
+                text=True
+            )
+            if res.returncode == 0 and res.stdout.strip():
+                tdata = json.loads(res.stdout)
+                tor_ip = tdata.get("IP", "")
+                if tor_ip:
+                    return tor_ip, "Tor Exit Node", "Tor Onion Network", "Anonymous"
+        except Exception:
+            pass
+
     endpoints = [
         "https://ipapi.co/json/",
         "https://api.myip.com",

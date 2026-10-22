@@ -74,13 +74,25 @@ else
     fi
 fi
 
-# 8. Estado de la VPN (Acción del Operador)
-echo -e "\n[*] Estado del túnel VPN:"
+# 8. Estado y Conexión Automática de la VPN (Proton / WireGuard)
+echo -e "\n[*] Verificando túnel VPN..."
 if ip -br link | grep -E 'proton|wg|tun' | grep -q 'UP'; then
     VPN_IFACE=$(ip -br link | grep -E 'proton|wg|tun' | awk '{print $1}')
     echo -e "    ${GREEN}✔ VPN Detectada y ACTIVA: $VPN_IFACE${NC}"
 else
-    echo -e "    ${YELLOW}⚠ Recordatorio: Conecte su VPN de preferencia (Proton / WireGuard).${NC}"
+    # Si protonvpn CLI está instalado, intentar auto-conexión al servidor más rápido
+    if command -v protonvpn >/dev/null 2>&1; then
+        echo -e "    [*] Intentando autoconexión con Proton VPN..."
+        if protonvpn connect >/dev/null 2>&1; then
+            sleep 2
+            VPN_IFACE=$(ip -br link | grep -E 'proton|wg|tun' | awk '{print $1}' | head -n 1)
+            echo -e "    ${GREEN}✔ Proton VPN conectado exitosamente: ${VPN_IFACE:-proton0}${NC}"
+        else
+            echo -e "    ${YELLOW}⚠ Proton VPN requiere inicio de sesión ('protonvpn signin') o conexión manual.${NC}"
+        fi
+    else
+        echo -e "    ${YELLOW}⚠ Recordatorio: Conecte su VPN de preferencia (Proton / WireGuard).${NC}"
+    fi
 fi
 
 # 9. Anti-Forensics: Desactivar SWAP en disco y silenciar Bash History
