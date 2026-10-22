@@ -1,154 +1,142 @@
 # ⚡ Ultima Web Sec // Cyber-Deck Intelligence & Defensive Forensic Suite
 
 > **Autor y Arquitecto de Producto**: Ibrahim García (`ultimaibrahim`)  
-> **Sistema de Diseño**: Crystal & Squircle • Glassmorphism TUI • Alta Densidad btop  
-> **Licencia**: Open-Source Defensive Security
+> **Sistema de Diseño**: Crystal & Squircle • Glassmorphism TUI • Bento Grid de Alta Densidad (btop / hollywood)  
+> **Licencia**: Open-Source Defensive Security & Red/Blue Operations
 
 ---
 
 ## 🧭 1. Filosofía & Arquitectura de Producto
 
-**Ultima Web Sec** es la unificación definitiva de la suite de ciber-inteligencia interactiva (`web_sec_fork`) y el motor de auditoría estática, reglas YAML y mirroring forense (`web_sec_auditor`), consolidada bajo la filosofía de artesanía técnica y diseño visual de **Ibrahim García**:
-- **Cero Mediocridad**: Interfaces de terminal hiper-densas con sparklines, barras de progreso animadas FLIP (180ms - 250ms) y micro-indicadores tipo btop / hollywood.
-- **Aislamiento de Scope Inamovible**: Whitelist estricta (`allowed_targets.txt`). Ninguna acción se ejecuta fuera de los objetivos expresamente autorizados.
-- **Doble Confirmación en Módulos Destructivos**: Acciones de estrés masivo (`void()` y `void_plus()`) exigen confirmación en modal interactivo y confirmación por token manual.
-- **Rollback Transaccional**: Toda mutación en endpoints genera un registro inverso de rollback (`POST` -> `DELETE`) que devuelve el estado a su origen.
-- **Resiliencia Pura en Python**: Fallbacks sin dependencias binarias pesadas. Si WeasyPrint o Wappalyzer no existen, Web-Sec compila PDFs válidos RFC y clasifica tecnologías mediante su motor nativo.
+**Ultima Web Sec** es la suite definitiva de ciberseguridad ofensiva, inteligencia OSINT y defensa activa en tiempo real. Consolida tres pilares antes dispersos en un único motor de alto rendimiento:
+1. **Cyber-Deck Interactivo Reactivo**: Telemetría continua de red, sparklines en vivo, atajos de teclado sin latencia y retroalimentación sonora PCM.
+2. **Dynamic Endpoint Convergence (`discover_routes`)**: Minería automática de bundles JavaScript (`fetch`, `axios`, `XHR`) para erradicar falsos negativos causados por rutas estáticas en SPAs/Jamstack.
+3. **Active Defense & Blue Team Engine**: Desinformación, trampas de sesión con canarios rastreables, bombas de descompresión para escáneres hostiles y *tarpitting* silencioso para secuestrar los hilos de atacantes.
 
 ---
 
-## 🎨 2. Experiencia de Usuario: Crystal & Squircle TUI
+## 🎛️ 2. Guía de Modos Operativos (Frentes de Trabajo)
 
-La interfaz en modo 2 (Textual reactivo) organiza la telemetría en una cuadrícula Bento:
+La suite cuenta con **4 Modos Principales**. Al presionar **`[M]`** (o escribir `:mode` en el prompt), la interfaz muta de atmósfera, colores de borde y comportamiento:
+
 ```
-┌─────────────────────────┬────────────────────────────────────────┬─────────────────────────┐
-│ ■ 1. PRIVACY SHIELD     │ ■ 2. NETWORK TELEMETRY                 │ ■ 3. AUDIT ENGINE       │
-│  PRIV-SCORE: 95%        │  STATE: LIVE PUMP                      │  MODE:    WebSec        │
-│  VPN:  TUNNEL ON        │  NET-IO: ▂▃▅▇█▆▅▃                      │  LEVEL:   Recon·Intel   │
-│  DNS:  10.2.0.1 (SECURE)│  FLOW:   128 KB sent                   │  STATUS:  RECON ARMED   │
-│  IPV6: BLOCKED (SAFE)   │  AUD-IO: ▅▆▇█▆▅▄                       │  FLAGS: p m d F D s P v │
-└─────────────────────────┴────────────────────────────────────────┴─────────────────────────┘
-┌──────────────────────────────────────────────────────────────────┬─────────────────────────┐
-│ ■ LIVE OPS STREAM (hollywood)                                    │ ■ 4. TARGETS & VAULT    │
-│  ● [████████████████░░░░░░░░] 60%  STAGE: FINGERPRINTING TECH   │  TARGETS (3):           │
-│  >>> KERNEL INITIALIZED: AUDIT ENGINE READY                      │   › api.target.local    │
-│  › Probing host [1/3]: https://target.local                      │   › admin.target.local  │
-│  ✔ Tech detected: Next.js, React, Tailwind CSS, Nginx            │  CREDS VAULT: 4 TOKENS  │
-│  ✔ Subdomains found: 8 live hosts (crt.sh, DNS)                  │  LAST: [JWT] eyJhbGci...│
-└──────────────────────────────────────────────────────────────────┴─────────────────────────┘
+[M] ──► 1. WebSec   (Bordes Azul/Verde  - Frente Ofensivo / Red Team)
+        2. WebScrap (Bordes Magenta     - Extracción Silenciosa / Scraping)
+        3. WebRecon (Bordes Oro/Ámbar   - OSINT, Superficie & Reconocimiento)
+        4. BlueTeam (Bordes Rojo Alerta - Defensa Activa, Honeypots & Tarpit)
 ```
 
----
+### ⚔️ Modo 1: `WebSec` (Red Team Offensive)
+- **Propósito**: Evaluación de robustez, inyecciones, fuzzing de parámetros y pruebas de estrés asíncrono.
+- **Niveles disponibles (`[L]` o `:lvl <0-void_plus>`)**:
+  - `0·Passive`: Inspección de cabeceras OWASP, robots.txt, sitemaps y cookies seguras sin emitir tráfico anómalo.
+  - `1·Active`: Sondeo de verbos HTTP no estándar (`PUT`, `DELETE`, `PATCH`, `TRACE`), análisis de reflexión con canarios y comprobación de métodos permitidos.
+  - `2·Fuzzing`: Fuzzing agresivo de rutas ocultas mediante diccionarios locales (`wordlists/`) con motor nativo o FFuf/Gobuster.
+  - `3·Destruct`: Pruebas de mutación concurrente con recolección de credenciales filtradas.
+  - `void()`: Inyección de caos asíncrono con sobrecarga de peticiones.
+  - `void_plus()`: **Chaos Suite Extrema**:
+    - Requiere doble confirmación interactiva + token de seguridad manual (`DESTROY-SCOPE-CONFIRM`).
+    - Minería previa de endpoints con `discover_routes` para atacar rutas reales en lugar de rutas ciegas.
+    - Bombas de subida polimórficas (archivos anómalos para validar cuotas de memoria).
+    - Inundación de sockets WebSocket (`101 Switching Protocols`).
+    - Mapeo y ejecución de 24 binarios Red Team externos vía flags `ext_*` (Nuclei, SQLMap, Findomain, CME, etc.).
+    - **Rollback Transaccional Inverso**: Genera llamadas inversas automáticas para limpiar los recursos modificados.
 
-## 🔍 3. Suite de Reconocimiento y Banderas Inteligentes
+### 🕷️ Modo 2: `WebScrap` (Passive Extraction)
+- **Propósito**: Recolección de inteligencia del lado del cliente sin perturbar el servidor.
+- **Qué hace**:
+  - Descarga y mapea todos los enlaces y metadatos HTML.
+  - Descompila y extrae árboles de archivos JavaScript.
+  - Identifica endpoints internos de API y credenciales filtradas (JWT, AWS keys, tokens Bearer) mediante `credential_scanner.py`.
 
-El frente `recon` admite ejecución granular mediante flags independientes o combinados:
+### 📡 Modo 3: `WebRecon` (OSINT & Surface Intelligence)
+- **Propósito**: Mapeo integral de superficie de ataque antes de cualquier interacción directa.
+- **Banderas de Reconocimiento configurables**:
+  - `p` (Port Scan): Escaneo asíncrono de puertos TCP comunes sin herramientas pesadas.
+  - `m` (Mass Subdomains): Descubrimiento multicanal (crt.sh, HackerTarget, Amass, Subfinder, Assetfinder).
+  - `d` (Deep Crawl): Rastreo recursivo de formularios, rutas dinámicas y endpoints ocultos.
+  - `F` (Wappalyzer Native): Fingerprinting de más de 60 tecnologías de backend, frontend y servidores web.
+  - `D` (Database Snapshot): Búsqueda y análisis de volcados o backups expuestos (`.sql`, `.env`, `.bak`).
+  - `v` (Vault Storage): Cifrado automático de hallazgos en SQLite (`websec_vault.db`) con clave AES-256.
+  - `r` (Multi-Report): Generación de reporte interactivo HTML con Glassmorphism y PDF nativo sin dependencias.
+  - `s` (Ghost Jitter): Inyección de retrasos aleatorios y rotación de headers para burlar WAFs y sistemas de rate limiting.
+  - `P` (Tor Proxy): Enrutamiento automático por túnel SOCKS5 (`127.0.0.1:9050`).
 
-| Flag | Nombre | Descripción y Motor |
-| :---: | :--- | :--- |
-| **`p`** | **Port Scan** | Escaneo asíncrono no invasivo de puertos TCP mediante sockets directos (`asyncio`). |
-| **`m`** | **Mass Subdomains** | Descubrimiento agresivo de subdominios combinando OSINT pasivo (crt.sh, HackerTarget) y resolución DNS. |
-| **`d`** | **Deep Crawl** | Rastreo recursivo de rutas internas, formularios, scripts y endpoints con extracción de tokens. |
-| **`F`** | **Wappalyzer Clone** | Clon puro en Python de Wappalyzer. Detecta +60 tecnologías analizando headers, cookies y firmas DOM. |
-| **`D`** | **Database Snapshot** | Detección y descarga controlada de backups o dumps expuestos (`/dump`, `/backup`). |
-| **`v`** | **Vault & SQLite** | Persistencia cifrada con AES-256 en SQLite (`websec_vault.db`) y `.vault.key`. |
-| **`r`** | **Multi-Report** | Generación simultánea de reportes ejecutivos en HTML con Glassmorphism y PDF nativo. |
-| **`s`** | **Stealth / Ghost** | Jitter aleatorio de latencia entre peticiones y rotación de cabeceras antihuella WAF. |
-| **`P`** | **Auto-Tor / Proxy** | Activación automática de túnel SOCKS5 si Tor está disponible o si la privacidad está expuesta. |
-
----
-
-## 🛡️ 4. Evasión Inteligente y Auto-Tor
-
-1. **Auto-Detección de Necesidad**:
-   - Web-Sec analiza en segundo plano las interfaces con `privacy_guard.evaluate_privacy()`.
-   - Si detecta fugas de DNS o un score de privacidad inferior a 60%, **auto-activa** el modo de evasión.
-2. **Detección de Tor SOCKS5**:
-   - Comprueba de forma no bloqueante si el demonio Tor (`127.0.0.1:9050` o `9150`) está escuchando.
-   - Si está activo, redirige automáticamente el tráfico HTTP/HTTPS a través de `socks5h://`.
-   - Si no está activo, activa rotación continua de cabeceras evasivas (`User-Agent`, `Referer`, `X-Forwarded-For`, `Sec-Ch-Ua`).
-
----
-
-## ☣️ 5. Módulo Destructivo Seguro `void_plus`
-
-`void_plus()` está diseñado para pruebas de estrés y caos controlado en ambientes staging autorizados:
-- **Doble Confirmación Requerida**:
-  1. Primer modal interactivo `ConfirmScreen` confirmando la intención de mutar datos.
-  2. Pantalla de seguridad `InputScreen` donde el operador debe ingresar textualmente:
-     ```
-     DESTROY-SCOPE-CONFIRM
-     ```
-- **Ráfaga Asíncrona Multi-Vector**: Envíos masivos concurrentes (`POST`, `PUT`, `PATCH`, `DELETE`).
-- **Upload Bomb Polimórfico**: Estrés de subida de archivos (PNG, ZIP, TXT) para verificar límites del backend.
-- **Rollback Automático**: Ejecuta métodos inversos (`rollback_action`) para eliminar o restaurar los recursos generados durante la prueba.
-
----
-
-## 📊 6. Reportes Ejecutivos
-
-Web-Sec genera reportes en el directorio `outputs/`:
-- **Reporte HTML**: Construido con el sistema de diseño Crystal & Squircle, tarjetas de glassmorphism, métricas flotantes y badges de tecnologías.
-- **Reporte PDF Puro en Python**: Implementa un compilador PDF 1.4 de bajo nivel (`PurePythonPDF`). **No requiere WeasyPrint ni binarios de Node**, garantizando que el PDF se genera con éxito en cualquier entorno Linux/Docker/WSL.
-- **Reporte Markdown**: Historial consolidado exportable con `storage_vault.export_markdown_report()`.
+### 🛡️ Modo 4: `BlueTeam` (Active Counter-Measures & Tarpitting)
+- **Propósito**: Contención activa, detección de adversarios y agotamiento de recursos del atacante cuando el laboratorio o servidor está bajo asedio.
+- **Capacidades**:
+  - **Tarpit Socket Drain**: Al detectar peticiones hostiles o repetidas, responde con HTTP chunked enviando 1 byte cada 10 segundos por 120s, congelando los escáneres del atacante.
+  - **Decoy Endpoints & Honeypots**: Inyecta cebos altamente atractivos (`/api/v1/internal_auth`, `/.aws/credentials`, `/wp-login.php`, `/backup/admin.sql.gz`).
+  - **Honeytokens Canario**: Entrega credenciales trampa con firmas únicas (AWS/JWT) para monitorear y perfilar al atacante si intenta usarlas en internet.
+  - **Poisoned Gzip Bombs**: Entrega respuestas de 10 KB que se descomprimen a 100 MB en la memoria de escáneres mal configurados para forzar caídas por *Out-Of-Memory*.
+  - **Shadow-Banning**: Registra la IP en la tabla de hostiles y le sirve respuestas nulas sin alertarlo mediante un `403` obvio.
 
 ---
 
-## ⌨️ 7. Atajos de Teclado (Keybindings)
+## 🚀 3. Formas de Ejecución (CLI & TUI)
 
-| Tecla | Acción |
+### A. Comando Rápido del Sistema (Recomendado)
+Puedes lanzar la suite desde cualquier parte de tu terminal con:
+```bash
+web-sec
+# o también:
+ultima-web-sec
+```
+Abre de inmediato el **Cyber-Deck Principal** con Bento Grid interactivo, sonido táctil y controles reactivos.
+
+### B. Modo Auditoría Forense y Clonación Espejo (Modo CLI sin TUI)
+Si deseas auditar una web específica, descargar todo su frontend en local (estilo DevTools) y generar el reporte HTML:
+```bash
+web-sec -u https://mi-sitio.com -l 2
+```
+**Banderas avanzadas de CLI:**
+```bash
+web-sec --url https://mi-sitio.com --level 3 --dynamic --download-backup
+```
+- `--url` / `-u`: URL objetivo (obligatorio).
+- `--level` / `-l`: `1` (Rápido/SSL), `2` (Estándar/Mirror/Nuclei), `3` (Forense/Headless Chromium).
+- `--dynamic`: Activa renderizado dinámico con Chromium headless para SPAs e hidratación HTMX.
+- `--download-backup`: Descarga y resguarda localmente backups descubiertos.
+
+### C. Modo Escudos de Privacidad Previos
+Para levantar los escudos anti-forenses a nivel sistema operativo (desactivar swap, inhabilitar historial bash, limpiar DNS leaks):
+```bash
+sudo ./activate_shields.sh
+```
+
+---
+
+## ⌨️ 4. Mapa Completo de Atajos de Teclado (TUI Cyber-Deck)
+
+| Tecla / Comando | Acción Ejecutada |
 | :---: | :--- |
-| **`[SPACE]`** | Iniciar auditoría o ciclo de reconocimiento contra la whitelist |
-| **`[M]`** | Alternar modo: `WebSec` (Defensivo) ↔ `WebScrap` (Extracción) |
-| **`[L]`** | Ciclar nivel: `0·Passive` → `1·Active` → `2·Fuzzing` → `3·Destruct` → `recon` → `void` → `void_plus` |
-| **`[T]`** | Abrir editor de Whitelist y objetivos autorizados |
-| **`[P]`** | Alternar bandera de escaneo de puertos (`p`) |
-| **`[D]`** | Alternar bandera de deep crawl (`d`) |
-| **`[G]`** | Alternar bandera de enumeración de subdominios (`m`) |
-| **`[F]`** | Alternar bandera de fingerprinting Wappalyzer (`F`) |
-| **`[H]`** | Alternar modo Stealth / Ghost jitter (`s`) |
-| **`[X]`** | Alternar auto-enrutamiento por Tor / SOCKS5 (`P`) |
-| **`[R]`** | Alternar exportación automática de reportes HTML y PDF (`r`) |
-| **`[V]`** | Alternar persistencia en bóveda SQLite (`v`) |
-| **`[B]`** | Alternar enrutamiento con motor de navegador Playwright |
-| **`[E]`** | Exportar resultados en JSON crudo |
-| **`[C]`** | Limpiar terminal de logs |
-| **`[Q]`** | Salir de la aplicación de forma segura |
+| **`[SPACE]`** | **Start Mission**: Inicia la auditoría, scraping o activa el daemon BlueTeam según el modo. |
+| **`[M]`** | **Cycle Mode**: Rota entre `WebSec` ➔ `WebScrap` ➔ `WebRecon` ➔ `BlueTeam`. |
+| **`[L]`** | **Cycle Level**: Rota el nivel de agresividad (`0` a `void_plus`). |
+| **`[ENTER]` o `[:]`** | **Activar Prompt**: Abre la consola inferior para ingresar comandos internos o comandos shell nativos de Linux (`ls`, `curl`, `nmap`). |
+| **`[S]`** | **Toggle Stealth**: Activa/desactiva la evasión de huella WAF y jitter de tiempo. |
+| **`[D]`** | **Toggle Dry-Run**: Modo simulación; prueba la lógica de la suite sin enviar paquetes a los objetivos. |
+| **`[W]`** | **Toggle Text Wrap**: Alterna entre ajuste de línea automático y desplazamiento horizontal. |
+| **`[←] / [→]`** | **Scroll Horizontal**: Desplaza el panel de logs central a la izquierda o derecha (+5ch). |
+| **`[↑] / [↓]`** | **Scroll Vertical**: Navega por el historial de eventos del registro central. |
+| **`[T]`** | **Edit Scope / Targets**: Abre el diálogo interactivo para añadir o quitar dominios de la whitelist. |
+| **`[Q]`** | **Quit**: Apaga la suite de forma segura. |
 
 ---
 
-## 🐳 8. Despliegue con Docker y Makefile
+## 📊 5. Reportes y Artefactos Generados
 
-### Construir y Ejecutar con Makefile
-```bash
-# Ejecutar suite de pruebas
-make test
-
-# Validación sintáctica de todos los módulos
-make lint
-
-# Construir contenedor Docker
-make docker-build
-
-# Ejecutar contenedor interactivo
-make docker-run
-```
-
-### Ejecutar Localmente
-```bash
-# Lanzar selector de interfaz
-./run.sh
-
-# Lanzar directamente TUI btop / Crystal & Squircle
-./run.sh 2
-```
+Los informes se depositan automáticamente en la carpeta `outputs/`:
+1. **Dashboard Interactivo HTML**: Sistema de tarjetas Crystal & Squircle, indicadores de estado de puertos, gráficas de causalidad y credenciales extraídas.
+2. **Reporte Forense Markdown**: Resumen ejecutivo con timestamps y hallazgos catalogados por CVE/CWE.
+3. **Site Mirror (`site_mirror/`)**: Espejo estático completo (archivos `.html`, `.js`, `.css`, imágenes) descargados 1:1 para auditoría offline en local.
+4. **Bóveda SQLite Cifrada (`websec_vault.db`)**: Base de datos local protegida por cifrado simétrico donde se indexan tokens, contraseñas y metadatos de escaneos previos.
 
 ---
 
-## 🧩 9. Ecosistema de Herramientas Open-Source Soportadas
+## 🎧 6. Retroalimentación Sonora y Alertas PCM
 
-Web-Sec orquesta de forma nativa o mediante fallback:
-- **Descubrimiento**: Nmap, Gobuster, FFuf, OWASP Amass, Subfinder, Assetfinder, Sublist3r.
-- **Vulnerabilidades**: ProjectDiscovery Nuclei, SQLMap, OWASP Security Headers.
-- **OSINT**: SpiderFoot, SecurityTrails API, Shodan API, Censys Search API.
-- Consulta la guía técnica completa en [`docs/TOOLING_INTEGRATIONS.md`](docs/TOOLING_INTEGRATIONS.md).
+Ultima Web Sec cuenta con un sintetizador matemático nativo en Python (`sound_effects.py` vía `aplay`/ALSA) que genera retroalimentación táctil sin requerir librerías de audio externas:
+- **Beep de Confirmación**: Tono ascendente en tríada armónica al activar escudos o conmutar a `WebRecon`.
+- **Alarma Bitonal de Intrusión (880 Hz / 440 Hz)**: Disparada de golpe al detectar que una IP externa o bot tocó una ruta trampa (Honeytoken) en modo Blue Team.
+- **Secuencia Burn (Frecuencias Descendentes)**: Señal acústica de emergencia al ejecutar el protocolo de evacuación o kill-switch.
