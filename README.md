@@ -1,4 +1,4 @@
-# ⚡ Web-Sec // Cyber-Deck Intelligence & Defensive Suite
+# ⚡ Ultima Web Sec // Cyber-Deck Intelligence & Defensive Forensic Suite
 
 > **Autor y Arquitecto de Producto**: Ibrahim García (`ultimaibrahim`)  
 > **Sistema de Diseño**: Crystal & Squircle • Glassmorphism TUI • Alta Densidad btop  
@@ -8,7 +8,7 @@
 
 ## 🧭 1. Filosofía & Arquitectura de Producto
 
-Web-Sec es una suite de inteligencia defensiva, telemetría de red y auditoría de seguridad diseñada bajo la filosofía de artesanía técnica y diseño visual de **Ibrahim García**:
+**Ultima Web Sec** es la unificación definitiva de la suite de ciber-inteligencia interactiva (`web_sec_fork`) y el motor de auditoría estática, reglas YAML y mirroring forense (`web_sec_auditor`), consolidada bajo la filosofía de artesanía técnica y diseño visual de **Ibrahim García**:
 - **Cero Mediocridad**: Interfaces de terminal hiper-densas con sparklines, barras de progreso animadas FLIP (180ms - 250ms) y micro-indicadores tipo btop / hollywood.
 - **Aislamiento de Scope Inamovible**: Whitelist estricta (`allowed_targets.txt`). Ninguna acción se ejecuta fuera de los objetivos expresamente autorizados.
 - **Doble Confirmación en Módulos Destructivos**: Acciones de estrés masivo (`void()` y `void_plus()`) exigen confirmación en modal interactivo y confirmación por token manual.

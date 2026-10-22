@@ -275,6 +275,7 @@ class FlipProgressBarWidget(Static):
 
 class WebSecApp(App):
     CSS_PATH = "websec.css"
+    TITLE = "ULTIMA WEB SEC // DEFENSIVE CYBER-DECK"
 
     BINDINGS = [
         ("space", "start_audit", "Start"),
@@ -329,7 +330,7 @@ class WebSecApp(App):
 
     def compose(self) -> ComposeResult:
         with Horizontal(id="micro-header-bar"):
-            yield Static("⚡ WEB-SEC // CYBER-DECK [NANO]", id="brand-title")
+            yield Static("⚡ ULTIMA WEB SEC // CYBER-DECK [PRO]", id="brand-title")
             yield Static("UTC: 00:00 | HOST: linux-box | MEM: 4.2G", id="header-stats")
 
         with Grid(id="micro-grid"):
@@ -672,5 +673,26 @@ class WhitelistScreen(Screen):
         self.app.pop_screen()
 
 
+def run_cli_auditor(args: List[str]):
+    """Puente CLI que invoca el motor forense y mirroring de web_sec_auditor."""
+    auditor_main = PROJECT_DIR / "web_sec_auditor" / "main.py"
+    if not auditor_main.exists():
+        print(f"❌ Error: {auditor_main} no encontrado.")
+        sys.exit(1)
+    import subprocess
+    cmd = [sys.executable, str(auditor_main)] + args
+    try:
+        sys.exit(subprocess.run(cmd).returncode)
+    except KeyboardInterrupt:
+        print("\n[!] Auditoría interrumpida por el usuario.")
+        sys.exit(0)
+
+
 if __name__ == "__main__":
-    WebSecApp().run()
+    if len(sys.argv) > 1 and sys.argv[1] in ("--audit", "-a", "--url", "-u"):
+        cli_args = sys.argv[1:]
+        if cli_args[0] in ("--audit", "-a"):
+            cli_args = cli_args[1:]
+        run_cli_auditor(cli_args)
+    else:
+        WebSecApp().run()

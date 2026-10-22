@@ -532,7 +532,7 @@ class RichLiveDeck:
         v_indicator = f" | V:+{self.v_offset}" if self.v_offset > 0 else ""
         dry_badge = " [DRY-RUN]" if self.dry_run else ""
         head_text = Text.assemble(
-            ("⚡ WEB-SEC // CYBER-DECK v3.2  ", "bold cyan"),
+            ("⚡ ULTIMA WEB SEC // CYBER-DECK v4.0  ", "bold cyan"),
             ("CWD: ", "dim"), (f"~/{cwd_short} ", "bold white"),
             ("LOCAL: ", "dim"), (now, "white"),
             (" | SCOPE: ", "dim"), (str(len(self.targets)), "bold yellow"),
