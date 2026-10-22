@@ -116,6 +116,8 @@ class RobustTerminalReader:
 
 class RichLiveDeck:
     def __init__(self):
+        self.sudo_password: Optional[str] = None
+        self.pending_sudo_action: Optional[str] = None
         self.console = Console()
         self.mode = "WebSec"
         self.level = "0"
@@ -286,6 +288,16 @@ class RichLiveDeck:
     def execute_command(self, cmd_line: str):
         raw_cmd = cmd_line.strip()
         if not raw_cmd:
+            return
+
+        # Si había una acción pendiente esperando contraseña sudo
+        if self.pending_sudo_action:
+            action = self.pending_sudo_action
+            self.pending_sudo_action = None
+            self.sudo_password = raw_cmd
+            self.log("[dim]🔑 Contraseña sudo registrada para la sesión en memoria.[/]")
+            if action == "shields":
+                self.execute_command(":shields")
             return
 
         is_internal = raw_cmd.startswith(":")
@@ -475,6 +487,17 @@ class RichLiveDeck:
                 self.trigger_audit()
                 return
             elif first_word in ("shields", "shield-up", "arm-shields"):
+                if not self.sudo_password:
+                    # Validar si sudo requiere contraseña o facial auth
+                    test_sudo = subprocess.run(["sudo", "-n", "true"], capture_output=True)
+                    if test_sudo.returncode != 0:
+                        self.pending_sudo_action = "shields"
+                        self.input_mode = True
+                        self.input_buffer = ""
+                        self.log("[bold yellow]🔑 Se requieren permisos de superusuario (SUDO) para armar los escudos del Kernel.[/]")
+                        self.log("[yellow]Introduce tu contraseña sudo en el prompt inferior y presiona [ENTER]:[/]")
+                        return
+
                 self.log("[bold cyan]🛡️ ACTIVANDO ESCUDOS DEL KERNEL & ANTI-FINGERPRINT...[/]")
                 def _run_shields_activation():
                     script_path = Path(__file__).parent / "activate_shields.sh"
@@ -482,15 +505,34 @@ class RichLiveDeck:
                         self.log("[red]Error: activate_shields.sh no encontrado.[/]")
                         return
                     try:
-                        res = subprocess.run(
-                            ["bash", str(script_path)],
-                            capture_output=True,
-                            text=True,
-                            timeout=15
-                        )
-                        for line in res.stdout.splitlines():
+                        env = os.environ.copy()
+                        # Bypass facial recognition si Howdy está presente
+                        env["HOWDY_DISABLE"] = "1"
+                        cmd = ["bash", str(script_path)]
+                        if self.sudo_password:
+                            # Inyectar password vía sudo -S y omitir Howdy
+                            cmd = ["sudo", "-S", "-p", "", "bash", str(script_path)]
+                            proc = subprocess.Popen(
+                                cmd,
+                                stdin=subprocess.PIPE,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE,
+                                text=True,
+                                env=env
+                            )
+                            stdout, stderr = proc.communicate(input=f"{self.sudo_password}\n", timeout=20)
+                        else:
+                            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=20, env=env)
+                            stdout, stderr = proc.stdout, proc.stderr
+
+                        for line in stdout.splitlines():
                             if line.strip():
                                 self.log(f"[dim]  › {escape(line.strip())}[/]")
+                        if stderr:
+                            for eline in stderr.splitlines():
+                                if "password" not in eline.lower() and eline.strip():
+                                    self.log(f"[dim red]  ! {escape(eline.strip())}[/]")
+
                         try:
                             from sound_effects import play_shield_on
                             play_shield_on()
@@ -733,11 +775,16 @@ class RichLiveDeck:
         # Command Input Bar
         cursor = "█" if int(time.time() * 3) % 2 == 0 else " "
         prompt_style = "bold cyan" if self.input_mode else "dim white"
-        prompt_title = f"[bold green]PROMPT ACTIVO (Escribe :help para ver plugins y presiona Enter)[/]" if self.input_mode else "[dim]PROMPT INACTIVO (Presiona [ENTER] o [:] para escribir)[/]"
+        if self.pending_sudo_action:
+            prompt_title = "[bold yellow]🔑 AUTORIZACIÓN PRIVILEGIADA: Introduce tu contraseña sudo y presiona [ENTER][/]"
+            display_buffer = "•" * len(self.input_buffer)
+        else:
+            prompt_title = f"[bold green]PROMPT ACTIVO (Escribe :help para ver plugins y presiona Enter)[/]" if self.input_mode else "[dim]PROMPT INACTIVO (Presiona [ENTER] o [:] para escribir)[/]"
+            display_buffer = self.input_buffer
         
         avail_prompt_width = max(15, term_width - 12)
-        if len(self.input_buffer) > avail_prompt_width:
-            faded_buffer = render_scrolled_line(self.input_buffer, len(self.input_buffer) - avail_prompt_width, avail_prompt_width, base_style="bold white")
+        if len(display_buffer) > avail_prompt_width:
+            faded_buffer = render_scrolled_line(display_buffer, len(display_buffer) - avail_prompt_width, avail_prompt_width, base_style="bold white")
             prompt_body = Text.assemble(
                 ("❯ ", prompt_style),
                 faded_buffer,
@@ -746,7 +793,7 @@ class RichLiveDeck:
         else:
             prompt_body = Text.assemble(
                 ("❯ ", prompt_style),
-                (self.input_buffer, "bold white"),
+                (display_buffer, "bold white"),
                 (cursor, "bold green")
             )
             
