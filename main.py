@@ -391,9 +391,16 @@ class WebSecApp(App):
         self.query_one("#header-stats", Static).update(f"LOCAL: {now} | SCOPE: {len(self.targets)} hosts | BUS: READY")
 
     def action_toggle_mode(self) -> None:
-        self.mode = "WebScrap" if self.mode == "WebSec" else "WebSec"
+        modes = ["WebSec", "WebScrap", "BlueTeam"]
+        idx = (modes.index(self.mode) + 1) % len(modes) if self.mode in modes else 0
+        self.mode = modes[idx]
         self.control_widget.refresh_display(self.mode, self.level, self.use_browser, self.recon_flags)
-        self.log_widget.write(f"[dim]» Mode switched to:[/] [bold cyan]{self.mode}[/]")
+        if self.mode == "BlueTeam":
+            from sound_effects import play_alert_detected
+            play_alert_detected()
+            self.log_widget.write(f"[bold red]» Mode switched to:[/] [bold red]{self.mode} (DEFENSE & TARPIT ARMED)[/]")
+        else:
+            self.log_widget.write(f"[dim]» Mode switched to:[/] [bold cyan]{self.mode}[/]")
 
     def action_toggle_browser(self) -> None:
         self.use_browser = not self.use_browser
