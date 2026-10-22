@@ -305,6 +305,8 @@ class RichLiveDeck:
             self.log("[dim]🔑 Contraseña sudo registrada para la sesión en memoria.[/]")
             if action == "shields":
                 self.execute_command(":shields")
+            elif action == "disarm":
+                self.execute_command(":disarm")
             return
 
         is_internal = raw_cmd.startswith(":")
@@ -314,13 +316,14 @@ class RichLiveDeck:
         args = parts[1:]
 
         # 1. COMANDOS DE PLUGINS Y WEB-SEC
-        if is_internal or first_word in ("add", "rm", "mode", "lvl", "level", "start", "audit", "priv", "help", "wrap", "nmap", "sqlmap", "gobuster", "ffuf", "whatweb", "headers", "stealth", "dry-run", "export-md"):
+        if is_internal or first_word in ("add", "rm", "mode", "lvl", "level", "start", "audit", "priv", "help", "wrap", "nmap", "sqlmap", "gobuster", "ffuf", "whatweb", "headers", "stealth", "dry-run", "export-md", "shields", "disarm", "unshield"):
             if first_word in ("q", "quit", "exit"):
                 self.is_running = False
                 return
             elif first_word in ("help", "?"):
                 self.log("[bold cyan]PLUGINS DISPONIBLES:[/] :nmap <host> | :sqlmap <url> | :gobuster <url> | :ffuf <url> | :whatweb <url> | :headers <host>")
                 self.log("[bold cyan]CONTROLES:[/] :stealth | :dry-run | :export-md | :add <host> | :rm <host> | :wrap")
+                self.log("[bold cyan]ESCUDOS & EVASIÓN:[/] :shields (Armar) | :disarm (Rotar huellas, sellar y apagar) | [K] / [Shift+K]")
                 self.log("[bold cyan]SHELL LINUX:[/] Ejecuta comandos nativos directamente: [white]ls, cd, cat, curl, ping, etc.[/]")
                 return
             elif first_word == "ffuf":
@@ -553,6 +556,59 @@ class RichLiveDeck:
                     except Exception as err:
                         self.log(f"[bold red]! Error al armar escudos: {err}[/]")
                 threading.Thread(target=_run_shields_activation, daemon=True).start()
+                return
+            elif first_word in ("disarm", "shield-down", "unshield", "close-doors"):
+                if not self.sudo_password:
+                    test_sudo = subprocess.run(["sudo", "-n", "true"], capture_output=True)
+                    if test_sudo.returncode != 0:
+                        self.pending_sudo_action = "disarm"
+                        self.input_mode = True
+                        self.input_buffer = ""
+                        self.log("[bold yellow]🔑 Se requieren permisos sudo para purgar huellas, rotar identidad y cerrar escudos.[/]")
+                        self.log("[yellow]Introduce tu contraseña sudo en el prompt inferior y presiona [ENTER]:[/]")
+                        return
+
+                self.log("[bold magenta]🔒 INICIANDO PROTOCOLO DE DESACTIVACIÓN & SELLADO DE PUERTAS...[/]")
+                def _run_shields_deactivation():
+                    script_path = Path(__file__).parent / "deactivate_shields.sh"
+                    if not script_path.exists():
+                        self.log("[red]Error: deactivate_shields.sh no encontrado.[/]")
+                        return
+                    try:
+                        env = os.environ.copy()
+                        env["HOWDY_DISABLE"] = "1"
+                        cmd = ["bash", str(script_path)]
+                        if self.sudo_password:
+                            cmd = ["sudo", "-S", "-p", "", "bash", str(script_path)]
+                            proc = subprocess.Popen(
+                                cmd,
+                                stdin=subprocess.PIPE,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE,
+                                text=True,
+                                env=env
+                            )
+                            stdout, stderr = proc.communicate(input=f"{self.sudo_password}\n", timeout=25)
+                        else:
+                            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=25, env=env)
+                            stdout, stderr = proc.stdout, proc.stderr
+
+                        for line in stdout.splitlines():
+                            clean_line = strip_ansi(line).strip()
+                            if clean_line:
+                                self.log(f"[dim]  › {escape(clean_line)}[/]")
+                        if stderr:
+                            for eline in stderr.splitlines():
+                                clean_eline = strip_ansi(eline).strip()
+                                if "password" not in clean_eline.lower() and clean_eline:
+                                    self.log(f"[dim red]  ! {escape(clean_eline)}[/]")
+
+                        # Re-evaluar privacidad tras desarmado
+                        self.privacy_status = evaluate_privacy()
+                        self.log("[bold magenta]✔ Protocolo completado: Huellas rotadas, caché ARP purgada y puertas selladas.[/]")
+                    except Exception as err:
+                        self.log(f"[bold red]! Error al desarmar escudos: {err}[/]")
+                threading.Thread(target=_run_shields_deactivation, daemon=True).start()
                 return
 
         # 2. SHELL NATIVO LINUX
@@ -821,6 +877,7 @@ class RichLiveDeck:
             foot_text = Text.from_markup(
                 "[bold cyan][ENTER / :][/] [white]Escribir[/]  "
                 "[bold cyan][K][/] [yellow]Armar Escudos[/]  "
+                "[bold cyan][X][/] [magenta]Desarmar/Sellar[/]  "
                 "[bold cyan][S][/] [white]Stealth[/]  "
                 "[bold cyan][D][/] [white]DryRun[/]  "
                 "[bold cyan][← / →][/] [white]Scroll H[/]  "
@@ -874,6 +931,8 @@ class RichLiveDeck:
                                 self.log(f"[dim]Modo Wrap:[/] {'[green]ON[/]' if self.wrap_mode else '[yellow]OFF[/]'}")
                             elif key in ('k', 'K'):
                                 self.execute_command(":shields")
+                            elif key in ('x', 'X'):
+                                self.execute_command(":disarm")
                             elif key in ('s', 'S'):
                                 self.stealth_active = not self.stealth_active
                                 set_stealth_mode(self.stealth_active)
