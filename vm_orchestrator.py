@@ -153,7 +153,7 @@ def launch_parrot():
         "-chardev", "qemu-vdagent,id=vdagent,name=vdagent,clipboard=on",
         "-device", "virtserialport,chardev=vdagent,name=com.redhat.spice.0",
         "-net", "nic,model=virtio",
-        "-net", "user",
+        "-net", "user,dns=1.1.1.1",
         "-usb",
         "-device", "usb-tablet"
     ])
@@ -177,7 +177,7 @@ def launch_tails():
         "-vga", "virtio",
         "-display", "gtk,gl=on",
         "-net", "nic,model=virtio",
-        "-net", "user",
+        "-net", "user,dns=1.1.1.1",
         "-usb",
         "-device", "usb-tablet"
     ]
