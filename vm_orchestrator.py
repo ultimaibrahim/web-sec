@@ -187,10 +187,11 @@ def launch_tails():
 def launch_vault():
     info = ISOS["debian"]
     disk = info["disk"]
-    if not disk.exists():
-        console.print("[red]El disco virtual vault_debian.qcow2 no existe.[/]")
-        return
-    console.print(f"[bold cyan]🏛️ Lanzando Bóveda Debian Minimal AIR-GAPPED (Usuario: debian / Clave: toor)...[/]")
+    iso = info["file"]
+    kernel = Path("/home/ultimau/vms/installer/vmlinuz")
+    initrd = Path("/home/ultimau/vms/installer/initrd.gz")
+
+    console.print(f"[bold cyan]🏛️ Iniciando Instalador Gráfico Directo de Debian Minimal...[/]")
     cmd = [
         "qemu-system-x86_64",
         "-enable-kvm",
@@ -198,14 +199,26 @@ def launch_vault():
         "-smp", "2",
         "-m", "2G",
         "-drive", f"file={disk},if=virtio,format=qcow2",
+        "-cdrom", str(iso),
         "-vga", "virtio",
         "-display", "gtk",
-        "-net", "none",
+        "-net", "nic,model=virtio",
+        "-net", "user,dns=1.1.1.1",
         "-usb",
         "-device", "usb-tablet"
     ]
+    # Si tenemos el kernel del instalador extraído, arranque directo garantizado sin pasar por SeaBIOS
+    if kernel.exists() and initrd.exists():
+        cmd.extend([
+            "-kernel", str(kernel),
+            "-initrd", str(initrd),
+            "-append", "vga=788 --- quiet"
+        ])
+    else:
+        cmd.extend(["-boot", "d"])
+
     subprocess.Popen(cmd)
-    console.print("[green]✔ Bóveda iniciada (100% aislada de red). Credenciales: debian / toor (o root / toor).[/]")
+    console.print("[green]✔ Instalador de Debian iniciado en pantalla. Establece tu contraseña y usuario a tu gusto.[/]")
 
 def main():
     check_dirs()
