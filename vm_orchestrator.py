@@ -184,9 +184,10 @@ def launch_tails():
 def launch_vault():
     info = ISOS["debian"]
     disk = info["disk"]
-    iso = info["file"]
-    
-    # Si la ISO de netinst existe, arrancar con soporte de instalación o mantenimiento
+    if not disk.exists():
+        console.print("[red]El disco virtual vault_debian.qcow2 no existe.[/]")
+        return
+    console.print(f"[bold cyan]🏛️ Lanzando Bóveda Debian Minimal AIR-GAPPED (Usuario: debian / Clave: toor)...[/]")
     cmd = [
         "qemu-system-x86_64",
         "-enable-kvm",
@@ -196,20 +197,12 @@ def launch_vault():
         "-drive", f"file={disk},if=virtio,format=qcow2",
         "-vga", "virtio",
         "-display", "gtk",
-        "-net", "nic,model=virtio",
-        "-net", "user",
+        "-net", "none",
         "-usb",
         "-device", "usb-tablet"
     ]
-    if iso.exists():
-        console.print(f"[bold cyan]🏛️ Iniciando Instalador de Bóveda Debian Minimal (Netinst ISO)...[/]")
-        cmd.extend(["-cdrom", str(iso), "-boot", "d"])
-    else:
-        console.print(f"[bold cyan]🏛️ Lanzando Bóveda Debian Minimal instalada...[/]")
-        cmd.extend(["-boot", "c"])
-
     subprocess.Popen(cmd)
-    console.print("[green]✔ Ventana del instalador de Debian iniciada. Configura tu usuario y clave a tu gusto.[/]")
+    console.print("[green]✔ Bóveda iniciada (100% aislada de red). Credenciales: debian / toor (o root / toor).[/]")
 
 def main():
     check_dirs()
