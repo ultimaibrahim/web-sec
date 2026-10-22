@@ -446,7 +446,7 @@ class RichLiveDeck:
                 self.log(f"[cyan]Modo Wrap de texto:[/] {'[bold green]ACTIVADO[/]' if self.wrap_mode else '[bold yellow]DESACTIVADO (Scroll H)[/]'}")
                 return
             elif first_word == "mode":
-                modes = ["WebSec", "WebScrap", "BlueTeam"]
+                modes = ["WebSec", "WebScrap", "WebScan", "BlueTeam"]
                 idx = (modes.index(self.mode) + 1) % len(modes) if self.mode in modes else 0
                 self.mode = modes[idx]
                 if self.mode == "BlueTeam":
@@ -456,6 +456,13 @@ class RichLiveDeck:
                     except Exception:
                         pass
                     self.log(f"[bold red]Modo cambiado a:[/] [bold red]{self.mode} (DEFENSE & TARPIT ARMED)[/]")
+                elif self.mode == "WebScan":
+                    try:
+                        from sound_effects import play_shield_on
+                        play_shield_on()
+                    except Exception:
+                        pass
+                    self.log(f"[bold yellow]Modo cambiado a:[/] [bold yellow]{self.mode} (PASSIVE SURFACE & NUCLEI MAPPING)[/]")
                 else:
                     self.log(f"[dim]Modo cambiado a:[/] [bold cyan]{self.mode}[/]")
                 return
@@ -548,6 +555,39 @@ class RichLiveDeck:
             Layout(name="vault", ratio=1)
         )
 
+        # Esquema Cromático Dinámico según el MODO ACTIVO
+        mode_colors = {
+            "WebSec": {
+                "accent": "bold cyan",
+                "border_main": "blue",
+                "border_stream": "green",
+                "tag": "[bold red]⚔️ RED-TEAM OFFENSIVE[/]",
+                "header_badge": "bold red"
+            },
+            "WebScrap": {
+                "accent": "bold magenta",
+                "border_main": "magenta",
+                "border_stream": "cyan",
+                "tag": "[bold magenta]🕷️ PASSIVE EXTRACTION & SCRAP[/]",
+                "header_badge": "bold magenta"
+            },
+            "WebScan": {
+                "accent": "bold yellow",
+                "border_main": "yellow",
+                "border_stream": "yellow",
+                "tag": "[bold yellow]📡 RECON & SURFACE MAPPING[/]",
+                "header_badge": "bold yellow"
+            },
+            "BlueTeam": {
+                "accent": "bold red",
+                "border_main": "red",
+                "border_stream": "red",
+                "tag": "[bold red]🛡️ ACTIVE DEFENSE & TARPIT[/]",
+                "header_badge": "bold red"
+            }
+        }
+        theme = mode_colors.get(self.mode, mode_colors["WebSec"])
+
         # Header
         now = datetime.now().strftime("%H:%M:%S")
         cwd_short = Path(self.current_cwd).name or "/"
@@ -555,7 +595,8 @@ class RichLiveDeck:
         v_indicator = f" | V:+{self.v_offset}" if self.v_offset > 0 else ""
         dry_badge = " [DRY-RUN]" if self.dry_run else ""
         head_text = Text.assemble(
-            ("⚡ ULTIMA WEB SEC // CYBER-DECK v4.0  ", "bold cyan"),
+            ("⚡ ULTIMA WEB SEC // ", "bold cyan"),
+            (f"MODE: {self.mode.upper()}  ", theme["header_badge"]),
             ("CWD: ", "dim"), (f"~/{cwd_short} ", "bold white"),
             ("LOCAL: ", "dim"), (now, "white"),
             (" | SCOPE: ", "dim"), (str(len(self.targets)), "bold yellow"),
@@ -591,7 +632,7 @@ class RichLiveDeck:
         shield_table.add_row("[dim]IP:[/]", f"[white]{s.public_ip[:16]}[/]")
         shield_table.add_row("[dim]ISP:[/]", f"[yellow]{s.isp_org[:14]}[/]")
         shield_table.add_row("[dim]LOC:[/]", f"[cyan]{s.city[:10]}, {s.country[:3]}[/]")
-        layout["shield"].update(Panel(shield_table, title="[bold cyan]1. SHIELD[/]", border_style="blue"))
+        layout["shield"].update(Panel(shield_table, title=f"[{theme['accent']}]1. SHIELD[/]", border_style=theme["border_main"]))
 
         # 2. Telemetry Panel
         delta_net = random.randint(0, 7) if self.is_auditing else random.randint(0, 2)
@@ -612,20 +653,20 @@ class RichLiveDeck:
         telem_table.add_row("[dim]VOL:[/]  ", f"{self.bytes_sent // 1024} KB")
         telem_table.add_row("[dim]AUD:[/]  ", f"[magenta]{req_sp}[/]")
         telem_table.add_row("[dim]LOAD:[/] ", f"{random.randint(14, 22)}% [dim]4.2G ram[/]")
-        layout["telemetry"].update(Panel(telem_table, title="[bold cyan]2. TELEMETRY[/]", border_style="blue"))
+        layout["telemetry"].update(Panel(telem_table, title=f"[{theme['accent']}]2. TELEMETRY[/]", border_style=theme["border_main"]))
 
         # 3. Controls Panel
         lvl_col = "red" if self.level in ["3", "void"] else "yellow" if self.level == "2" else "cyan"
         stealth_badge = "[bold green]ENGAGED[/]" if self.stealth_active else "[dim]DISENGAGED[/]"
         dry_text = "[bold yellow]DRY-RUN ON[/]" if self.dry_run else "[green]LIVE TRAFFIC[/]"
         ctrl_table = Table.grid(padding=(0, 1))
-        ctrl_table.add_row("[dim]MODE:[/] ", f"[bold white]{self.mode}[/]")
+        ctrl_table.add_row("[dim]MODE:[/] ", theme["tag"])
         ctrl_table.add_row("[dim]LEVEL:[/]", f"[bold {lvl_col}]{self.level}[/]")
         ctrl_table.add_row("[dim]TARGETS:[/]", f"[white]{len(self.targets)} scoped[/]")
         ctrl_table.add_row("[dim]STEALTH:[/]", stealth_badge)
         ctrl_table.add_row("[dim]TRAFFIC:[/]", dry_text)
         ctrl_table.add_row("[dim]VIEW:[/] ", f"[cyan]{'WRAP' if self.wrap_mode else 'SCROLL-H'}[/]")
-        layout["controls"].update(Panel(ctrl_table, title="[bold cyan]3. ENGINE & PLUGINS[/]", border_style="blue"))
+        layout["controls"].update(Panel(ctrl_table, title=f"[{theme['accent']}]3. ENGINE & PLUGINS[/]", border_style=theme["border_main"]))
 
         # Center: Stream Logs
         center_width = max(20, term_width - 66)
@@ -643,7 +684,7 @@ class RichLiveDeck:
 
         stream_group = Text("\n").join(formatted_logs)
         scroll_title = f"[bold green]LIVE STREAM[/] [dim](H:+{self.h_offset}ch | [←/→] scroll | [W] wrap)[/]" if not self.wrap_mode else "[bold green]LIVE STREAM [WRAP MODE][/]"
-        layout["center"].update(Panel(stream_group, title=scroll_title, border_style="green"))
+        layout["center"].update(Panel(stream_group, title=scroll_title, border_style=theme["border_stream"]))
 
         # Right: Scope & Vault
         scope_lines = []
@@ -654,7 +695,7 @@ class RichLiveDeck:
         if len(self.targets) > 5:
             scope_lines.append(Text(f"+{len(self.targets)-5} more...", style="dim"))
 
-        layout["scope"].update(Panel(Text("\n").join(scope_lines), title="[bold cyan]4. TARGET SCOPE[/]", border_style="cyan"))
+        layout["scope"].update(Panel(Text("\n").join(scope_lines), title=f"[{theme['accent']}]4. TARGET SCOPE[/]", border_style=theme["border_main"]))
 
         vault_body = (
             f"[bold yellow]TOKENS TOTAL:[/] [bold white]{self.tokens_found}[/]\n\n"
@@ -662,7 +703,7 @@ class RichLiveDeck:
             f"[dim]STORAGE:[/] [white]SQLite AES-256[/]\n"
             f"[dim]PLUGINS:[/] [cyan]:nmap :sqlmap :headers[/]"
         )
-        layout["vault"].update(Panel(vault_body, title="[bold yellow]5. CRED VAULT[/]", border_style="yellow"))
+        layout["vault"].update(Panel(vault_body, title=f"[{theme['accent']}]5. CRED VAULT[/]", border_style=theme["border_main"]))
 
         # Command Input Bar
         cursor = "█" if int(time.time() * 3) % 2 == 0 else " "
@@ -762,7 +803,7 @@ class RichLiveDeck:
                             elif key == ' ':
                                 self.trigger_audit()
                             elif key in ('m', 'M'):
-                                modes = ["WebSec", "WebScrap", "BlueTeam"]
+                                modes = ["WebSec", "WebScrap", "WebScan", "BlueTeam"]
                                 idx = (modes.index(self.mode) + 1) % len(modes) if self.mode in modes else 0
                                 self.mode = modes[idx]
                                 if self.mode == "BlueTeam":
@@ -772,6 +813,13 @@ class RichLiveDeck:
                                     except Exception:
                                         pass
                                     self.log(f"[bold red]Mode cycled to:[/] [bold red]{self.mode} (DEFENSE & TARPIT ARMED)[/]")
+                                elif self.mode == "WebScan":
+                                    try:
+                                        from sound_effects import play_shield_on
+                                        play_shield_on()
+                                    except Exception:
+                                        pass
+                                    self.log(f"[bold yellow]Mode cycled to:[/] [bold yellow]{self.mode} (PASSIVE SURFACE & NUCLEI MAPPING)[/]")
                                 else:
                                     self.log(f"[dim]Mode cycled to:[/] [cyan]{self.mode}[/]")
                             elif key in ('l', 'L'):
