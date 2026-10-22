@@ -252,6 +252,19 @@ class RichLiveDeck:
 
             b_log = BridgeLogger(self)
 
+            if self.mode == "BlueTeam":
+                self.log(f"[bold red]🛡️ INICIANDO DAEMON DE BLUE TEAM & CONTRAMEDIDAS ACTIVAS...[/]")
+                try:
+                    from blue_team_shield import ActiveDefenseShieldServer, DECOY_PATHS
+                    shield_server = ActiveDefenseShieldServer(port=8999)
+                    shield_server.start()
+                    self.log(f"[bold green]✔ Active Defense Shield escuchando en 0.0.0.0:8999/TCP[/]")
+                    self.log(f"[dim]› {len(DECOY_PATHS)} honeypots y trampas de sesión activadas en vivo.[/]")
+                except Exception as b_err:
+                    self.log(f"[red]! Error iniciando Blue Team Shield: {b_err}[/]")
+                self.is_auditing = False
+                return
+
             for t in list(self.targets):
                 self.log(f"[cyan]› Target probe:[/] [white]{t}[/]")
                 if self.dry_run:
@@ -433,8 +446,18 @@ class RichLiveDeck:
                 self.log(f"[cyan]Modo Wrap de texto:[/] {'[bold green]ACTIVADO[/]' if self.wrap_mode else '[bold yellow]DESACTIVADO (Scroll H)[/]'}")
                 return
             elif first_word == "mode":
-                self.mode = "WebScrap" if self.mode == "WebSec" else "WebSec"
-                self.log(f"[dim]Modo cambiado a:[/] [bold cyan]{self.mode}[/]")
+                modes = ["WebSec", "WebScrap", "BlueTeam"]
+                idx = (modes.index(self.mode) + 1) % len(modes) if self.mode in modes else 0
+                self.mode = modes[idx]
+                if self.mode == "BlueTeam":
+                    try:
+                        from sound_effects import play_alert_detected
+                        play_alert_detected()
+                    except Exception:
+                        pass
+                    self.log(f"[bold red]Modo cambiado a:[/] [bold red]{self.mode} (DEFENSE & TARPIT ARMED)[/]")
+                else:
+                    self.log(f"[dim]Modo cambiado a:[/] [bold cyan]{self.mode}[/]")
                 return
             elif first_word in ("lvl", "level"):
                 if args and args[0] in ("0", "1", "2", "3", "void"):
@@ -739,8 +762,18 @@ class RichLiveDeck:
                             elif key == ' ':
                                 self.trigger_audit()
                             elif key in ('m', 'M'):
-                                self.mode = "WebScrap" if self.mode == "WebSec" else "WebSec"
-                                self.log(f"[dim]Mode cycled to:[/] [cyan]{self.mode}[/]")
+                                modes = ["WebSec", "WebScrap", "BlueTeam"]
+                                idx = (modes.index(self.mode) + 1) % len(modes) if self.mode in modes else 0
+                                self.mode = modes[idx]
+                                if self.mode == "BlueTeam":
+                                    try:
+                                        from sound_effects import play_alert_detected
+                                        play_alert_detected()
+                                    except Exception:
+                                        pass
+                                    self.log(f"[bold red]Mode cycled to:[/] [bold red]{self.mode} (DEFENSE & TARPIT ARMED)[/]")
+                                else:
+                                    self.log(f"[dim]Mode cycled to:[/] [cyan]{self.mode}[/]")
                             elif key in ('l', 'L'):
                                 lvls = ["0", "1", "2", "3", "void"]
                                 idx = (lvls.index(self.level) + 1) % len(lvls)
