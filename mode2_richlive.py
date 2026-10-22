@@ -474,9 +474,34 @@ class RichLiveDeck:
             elif first_word in ("start", "audit"):
                 self.trigger_audit()
                 return
-            elif first_word == "priv":
-                threading.Thread(target=lambda: setattr(self, 'privacy_status', evaluate_privacy()), daemon=True).start()
-                self.log("[cyan]Sondeo de privacidad disparado en background.[/]")
+            elif first_word in ("shields", "shield-up", "arm-shields"):
+                self.log("[bold cyan]🛡️ ACTIVANDO ESCUDOS DEL KERNEL & ANTI-FINGERPRINT...[/]")
+                def _run_shields_activation():
+                    script_path = Path(__file__).parent / "activate_shields.sh"
+                    if not script_path.exists():
+                        self.log("[red]Error: activate_shields.sh no encontrado.[/]")
+                        return
+                    try:
+                        res = subprocess.run(
+                            ["bash", str(script_path)],
+                            capture_output=True,
+                            text=True,
+                            timeout=15
+                        )
+                        for line in res.stdout.splitlines():
+                            if line.strip():
+                                self.log(f"[dim]  › {escape(line.strip())}[/]")
+                        try:
+                            from sound_effects import play_shield_on
+                            play_shield_on()
+                        except Exception:
+                            pass
+                        # Re-evaluar privacidad en segundo plano
+                        self.privacy_status = evaluate_privacy()
+                        self.log("[bold green]✔ Todos los escudos y protecciones anti-footprint han sido armados.[/]")
+                    except Exception as err:
+                        self.log(f"[bold red]! Error al armar escudos: {err}[/]")
+                threading.Thread(target=_run_shields_activation, daemon=True).start()
                 return
 
         # 2. SHELL NATIVO LINUX
@@ -737,6 +762,7 @@ class RichLiveDeck:
         else:
             foot_text = Text.from_markup(
                 "[bold cyan][ENTER / :][/] [white]Escribir[/]  "
+                "[bold cyan][K][/] [yellow]Armar Escudos[/]  "
                 "[bold cyan][S][/] [white]Stealth[/]  "
                 "[bold cyan][D][/] [white]DryRun[/]  "
                 "[bold cyan][← / →][/] [white]Scroll H[/]  "
@@ -788,6 +814,8 @@ class RichLiveDeck:
                             elif key in ('w', 'W'):
                                 self.wrap_mode = not self.wrap_mode
                                 self.log(f"[dim]Modo Wrap:[/] {'[green]ON[/]' if self.wrap_mode else '[yellow]OFF[/]'}")
+                            elif key in ('k', 'K'):
+                                self.execute_command(":shields")
                             elif key in ('s', 'S'):
                                 self.stealth_active = not self.stealth_active
                                 set_stealth_mode(self.stealth_active)
