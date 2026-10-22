@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+outputs/
+*.log
+.env
+websec_vault.db
+.DS_Store

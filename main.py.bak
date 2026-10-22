@@ -1,0 +1,258 @@
+#!/usr/bin/env python3
+"""Entry point for the web‑sec fork.
+
+Features
+--------
+* Two operating modes: **WebSec** (security audit) and **WebScrap** (data extraction).
+* Four testing levels (0‑3) and a special **void()** level for massive destructive actions.
+* Interactive TUI built with **textual** (Rich‑based).
+* Credential / token scanner applied to every HTTP response.
+* Whitelist enforcement – actions only run against targets listed in
+  `allowed_targets.txt` (editable from the TUI).
+
+All destructive actions (level 3 and ``void()``) require explicit, layered
+confirmation dialogs and are guarded by the whitelist. This tool is intended
+solely for isolated lab environments such as HackTheRank virtual labs.
+"""
+
+import sys
+import os
+from pathlib import Path
+from textual.app import App, ComposeResult
+from textual.widgets import Header, Footer, Button, Select, Static, Input
+try:
+    from textual.widgets import RichLog as TextLog
+except ImportError:
+    from textual.widgets import TextLog
+from textual.containers import Container, Horizontal
+from rich.markup import escape
+import json
+
+# Import level handlers (they will be fleshed out later)
+from level_handlers import level0, level1, level2, level3, void
+from credential_scanner import scan_text
+
+WHITELIST_PATH = Path(__file__).parent / "allowed_targets.txt"
+
+def load_whitelist() -> set[str]:
+    if WHITELIST_PATH.exists():
+        return {line.strip() for line in WHITELIST_PATH.read_text().splitlines() if line.strip()}
+    return set()
+
+def save_whitelist(domains: set[str]):
+    WHITELIST_PATH.write_text("\n".join(sorted(domains)))
+
+class WebSecApp(App):
+    CSS_PATH = "websec.css"
+    BINDINGS = [
+        ("q", "quit", "Quit"),
+        ("e", "export", "Export results"),
+    ]
+
+    def __init__(self):
+        super().__init__()
+        self.mode = "WebSec"
+        self.level = "0"
+        self.targets: set[str] = load_whitelist()
+        self.results: list[dict] = []
+        self.log_widget: TextLog = TextLog(highlight=True)
+        self.telemetry: Static = Static("Telemetry: N/A", id="telemetry")
+
+    def compose(self) -> ComposeResult:
+        yield Header()
+        with Container(id="controls"):
+            yield Select(
+                options=[("WebSec", "WebSec"), ("WebScrap", "WebScrap")],
+                prompt="Mode",
+                id="mode_select",
+            )
+            yield Select(
+                options=[
+                    ("0 - Passive recon", "0"),
+                    ("1 - Light active", "1"),
+                    ("2 - Fuzzing low risk", "2"),
+                    ("3 - Destructive", "3"),
+                    ("void() - Massive destructive", "void"),
+                ],
+                prompt="Level",
+                id="level_select",
+            )
+            yield Button(label="Edit whitelist", id="edit_whitelist")
+            yield Button(label="Start", id="start_btn", variant="success")
+        yield self.telemetry
+        yield self.log_widget
+        yield Footer()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "edit_whitelist":
+            self.push_screen(WhitelistScreen(self.targets))
+        elif event.button.id == "start_btn":
+            self.start_audit()
+
+    def on_select_changed(self, event: Select.Changed) -> None:
+        if event.select.id == "mode_select":
+            self.mode = event.value
+        elif event.select.id == "level_select":
+            self.level = event.value
+
+    def start_audit(self):
+        # Basic sanity check – ensure at least one whitelist entry
+        if not self.targets:
+            self.log_widget.write("[bold red]Whitelist is empty – add at least one target before proceeding.[/]")
+            return
+        # Confirm destructive levels
+        if self.level in {"3", "void"}:
+            self.confirm_destructive()
+        else:
+            self.run_level()
+
+    def confirm_destructive(self):
+        # Layered confirmation dialogs
+        def _callback(answer: bool):
+            if answer:
+                if self.level == "void":
+                    self.confirm_void()
+                else:
+                    self.run_level()
+            else:
+                self.log_widget.write("[yellow]Operation cancelled by user.[/]")
+        self.push_screen(ConfirmScreen(
+            title="Destructive Action",
+            message=f"You selected level {self.level}. This will perform actions that modify remote data.\nDo you wish to continue?",
+            callback=_callback,
+        ))
+
+    def confirm_void(self):
+        # Triple confirmation required
+        steps = ["First confirmation", "Second confirmation", "Final confirmation – type CONFIRM"]
+        def _step(idx: int):
+            if idx >= len(steps):
+                self.run_level()
+                return
+            def _cb(ans):
+                if ans:
+                    if steps[idx] == "Final confirmation – type CONFIRM":
+                        self.push_screen(InputScreen(
+                            title="Type CONFIRM",
+                            prompt="Enter CONFIRM to proceed: ",
+                            callback=lambda txt: self._final_void_confirm(txt, idx)
+                        ))
+                    else:
+                        _step(idx + 1)
+                else:
+                    self.log_widget.write("[yellow]Void operation aborted.[/]")
+            self.push_screen(ConfirmScreen(
+                title=steps[idx],
+                message="Proceed?",
+                callback=_cb,
+            ))
+        _step(0)
+
+    def _final_void_confirm(self, text: str, idx: int):
+        if text.strip().upper() == "CONFIRM":
+            self.run_level()
+        else:
+            self.log_widget.write("[red]Incorrect confirmation token – aborting void().[/]")
+
+    def run_level(self):
+        self.log_widget.write(f"[bold cyan]Running mode={self.mode}, level={self.level}[/]")
+        handler_map = {
+            "0": level0.run,
+            "1": level1.run,
+            "2": level2.run,
+            "3": level3.run,
+            "void": void.run,
+        }
+        handler = handler_map.get(self.level)
+        if not handler:
+            self.log_widget.write(f"[red]No handler for level {self.level}[/]")
+            return
+        for target in self.targets:
+            self.log_widget.write(f"[green]Scanning target: {target}[/]")
+            try:
+                result = handler(target, self.mode, self.log_widget)
+                self.results.append(result)
+            except Exception as exc:
+                self.log_widget.write(f"[red]Error on {target}: {exc}[/]")
+        self.telemetry.update(f"Telemetry: Completed {len(self.targets)} target(s)")
+
+    def action_export(self):
+        if not self.results:
+            self.log_widget.write("[yellow]No results to export.[/]")
+            return
+        out_path = Path("outputs")
+        out_path.mkdir(exist_ok=True)
+        out_file = out_path / "audit_results.json"
+        out_file.write_text(json.dumps(self.results, indent=2))
+        self.log_widget.write(f"[bold]Results exported to {out_file}[/]")
+
+# ---------------------------------------------------------------------------
+# Helper screens for confirmations, whitelist editing, and input
+# ---------------------------------------------------------------------------
+from textual.screen import Screen
+from textual.widgets import Label, Button, Input
+
+class ConfirmScreen(Screen):
+    BINDINGS = [("y", "yes", "Yes"), ("n", "no", "No")]
+    def __init__(self, title: str, message: str, callback):
+        super().__init__()
+        self.title = title
+        self.message = message
+        self.callback = callback
+    def compose(self) -> ComposeResult:
+        yield Static(f"[bold]{self.title}[/]")
+        yield Label(self.message)
+        with Horizontal():
+            yield Button("Yes", id="yes", variant="success")
+            yield Button("No", id="no", variant="error")
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "yes":
+            self.callback(True)
+        else:
+            self.callback(False)
+        self.app.pop_screen()
+    def action_yes(self):
+        self.callback(True)
+        self.app.pop_screen()
+    def action_no(self):
+        self.callback(False)
+        self.app.pop_screen()
+
+class InputScreen(Screen):
+    def __init__(self, title: str, prompt: str, callback):
+        super().__init__()
+        self.title = title
+        self.prompt = prompt
+        self.callback = callback
+    def compose(self) -> ComposeResult:
+        yield Static(f"[bold]{self.title}[/]")
+        yield Input(placeholder=self.prompt, id="input")
+        yield Button("Submit", id="submit", variant="primary")
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "submit":
+            txt = self.query_one(Input).value
+            self.callback(txt)
+            self.app.pop_screen()
+
+class WhitelistScreen(Screen):
+    def __init__(self, current: set[str]):
+        super().__init__()
+        self.current = set(current)
+    def compose(self) -> ComposeResult:
+        yield Static("[bold]Edit Whitelist (one domain/IP per line)[/]")
+        txt = "\n".join(sorted(self.current))
+        yield Input(value=txt, id="whitelist_input", height=10)
+        with Horizontal():
+            yield Button("Save", id="save", variant="success")
+            yield Button("Cancel", id="cancel", variant="error")
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "save":
+            txt = self.query_one(Input).value
+            new_set = {line.strip() for line in txt.splitlines() if line.strip()}
+            save_whitelist(new_set)
+            self.app.targets = new_set
+            self.app.log_widget.write("[green]Whitelist updated.[/]")
+        self.app.pop_screen()
+
+if __name__ == "__main__":
+    WebSecApp().run()

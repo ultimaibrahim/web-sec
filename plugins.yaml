@@ -1,0 +1,47 @@
+# plugins.yaml - Configuración y orquestación modular de plugins para Web-Sec
+plugins:
+  discovery:
+    nmap:
+      enabled: true
+      binary: "/usr/bin/nmap"
+      default_args: "-T4 -F --open"
+      description: "Escaneo rápido de puertos abiertos (Top 100)"
+    ffuf:
+      enabled: true
+      binary: "/usr/bin/ffuf"
+      default_args: "-w /usr/share/wordlists/dirb/common.txt -mc 200,301,302"
+      description: "Fuzzing web y descubrimiento de rutas ocultas"
+    subfinder:
+      enabled: false
+      binary: "subfinder"
+      default_args: "-silent"
+      description: "Enumeración pasiva de subdominios"
+
+  vulnerability:
+    sqlmap:
+      enabled: true
+      binary: "/usr/bin/sqlmap"
+      default_args: "--batch --risk=1 --level=1 --banner"
+      description: "Auditoría no destructiva de SQL Injection"
+    nuclei:
+      enabled: false
+      binary: "nuclei"
+      default_args: "-t cves/ -severity critical,high"
+      description: "Escaneo de plantillas YAML de CVEs"
+
+  scraping:
+    playwright:
+      enabled: true
+      engine: "chromium"
+      headless: true
+      description: "Renderizado dinámico de JavaScript y extracción SPA"
+    beautifulsoup:
+      enabled: true
+      parser: "lxml"
+      description: "Extracción y análisis de enlaces y metadatos HTML"
+
+  credentials:
+    regex_vault:
+      enabled: true
+      rules: ["AWS AccessKey", "Microsoft Graph", "Generic API Key", "Bearer Token", "Private Key"]
+      description: "Inspección continua de tokens en tráfico HTTP"
