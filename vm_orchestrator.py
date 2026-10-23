@@ -131,22 +131,23 @@ def launch_parrot():
     if not disk.exists():
         console.print("[red]El disco virtual parrot_security.qcow2 no fue encontrado en /home/ultimau/vms/disks/[/]")
         return
-    console.print(f"[bold green]⚡ Lanzando Parrot Security en QEMU/KVM con UEFI (OVMF)...[/]")
+    console.print(f"[bold green]⚡ Lanzando Parrot Security en QEMU/KVM con UEFI (OVMF CODE 4M)...[/]")
     
-    # Soporte UEFI obligatorio para discos GPT modernos de Parrot OS
-    ovmf_bios = "/usr/share/ovmf/OVMF.fd"
+    ovmf_code = "/usr/share/OVMF/OVMF_CODE_4M.fd"
+    ovmf_vars = "/home/ultimau/vms/parrot_vars.fd"
+    if not Path(ovmf_vars).exists():
+        shutil.copy("/usr/share/OVMF/OVMF_VARS_4M.fd", ovmf_vars)
+
     cmd = [
         "qemu-system-x86_64",
         "-enable-kvm",
         "-cpu", "host",
         "-smp", "4",
-        "-m", "6G"
-    ]
-    if Path(ovmf_bios).exists():
-        cmd.extend(["-bios", ovmf_bios])
-
-    cmd.extend([
-        "-drive", f"file={disk},if=virtio,format=qcow2",
+        "-m", "6G",
+        "-drive", f"if=pflash,format=raw,readonly=on,file={ovmf_code}",
+        "-drive", f"if=pflash,format=raw,file={ovmf_vars}",
+        "-device", "virtio-blk-pci,drive=hd0,bootindex=1",
+        "-drive", f"file={disk},if=none,id=hd0,format=qcow2",
         "-vga", "virtio",
         "-display", "gtk,gl=on",
         "-device", "virtio-serial-pci",
@@ -156,9 +157,9 @@ def launch_parrot():
         "-net", "user,dns=1.1.1.1",
         "-usb",
         "-device", "usb-tablet"
-    ])
+    ]
     subprocess.Popen(cmd)
-    console.print("[green]✔ Parrot Security iniciado con soporte UEFI (OVMF) y aceleración KVM.[/]")
+    console.print("[green]✔ Parrot Security iniciado con soporte UEFI directo (bootindex=1) y portapapeles.[/]")
 
 def launch_tails():
     info = ISOS["tails"]
